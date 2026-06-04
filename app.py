@@ -1,28 +1,29 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import asyncio
 import json
 import time
+import re
 from openai import AsyncOpenAI
 
 # =====================================================================
 # 1. API CONFIGURATION & GLOBAL SETTINGS
 # =====================================================================
+# Sicherer Abruf des Keys aus den Streamlit Secrets
 NVIDIA_API_KEY = st.secrets["NVIDIA_API_KEY"]
 
 ai_client = AsyncOpenAI(
-    base_url="https://integrate.api.nvidia.com/v1",
+    base_url="https://integrate.api.google.com/v1" if not NVIDIA_API_KEY else "https://integrate.api.nvidia.com/v1",
     api_key=NVIDIA_API_KEY
 )
 
-st.set_page_config(layout="wide", page_title="Multiplayer AI Football", page_icon="⚽")
+st.set_page_config(layout="wide", page_title="MAKE Football Team - AI Match", page_icon="⚽")
 
 # =====================================================================
 # 2. MULTI-LANGUAGE DICTIONARY (EN, DE, FR, ES, PL)
 # =====================================================================
 TRANSLATIONS = {
     "English": {
-        "panel_title": "⚽ Agent Control Panel",
+        "panel_title": "⚽ MAKE Football Team - Control Panel",
         "btn_stop": "⏹️ Stop Match (Auto-Play)",
         "btn_start": "▶️ Start Match (Auto-Play)",
         "prompt_hdr": "📝 Live Prompt Engineering",
@@ -31,14 +32,14 @@ TRANSLATIONS = {
         "mel_lbl": "🔵 MEL (Blue Defender) Strategy:",
         "btn_reset": "🔄 Reset Ball",
         "debug_hdr": "🖥️ Debug Console (Live JSON Output)",
-        "sim_title": "🏟️ Live Simulation",
+        "sim_title": "🏟️ MAKE Live Simulation",
         "time": "Time",
         "live": "Live Match",
-        "score_red": "RED",
-        "score_blue": "BLUE"
+        "score_red": "MAKE RED",
+        "score_blue": "MAKE BLUE"
     },
     "Deutsch": {
-        "panel_title": "⚽ Agenten-Kontrollzentrum",
+        "panel_title": "⚽ MAKE Football Team - Kontrollzentrum",
         "btn_stop": "⏹️ Spiel stoppen (Auto-Play)",
         "btn_start": "▶️ Spiel starten (Auto-Play)",
         "prompt_hdr": "📝 Live Prompt Engineering",
@@ -47,14 +48,14 @@ TRANSLATIONS = {
         "mel_lbl": "🔵 MEL (Blaue Verteidigerin) Strategie:",
         "btn_reset": "🔄 Ball zurücksetzen",
         "debug_hdr": "🖥️ Debug-Konsole (Live JSON Output)",
-        "sim_title": "🏟️ Live Simulation",
+        "sim_title": "🏟️ MAKE Live Simulation",
         "time": "Zeit",
         "live": "Live-Match",
-        "score_red": "ROT",
-        "score_blue": "BLAU"
+        "score_red": "MAKE ROT",
+        "score_blue": "MAKE BLAU"
     },
     "Français": {
-        "panel_title": "⚽ Panneau de Contrôle des Agents",
+        "panel_title": "⚽ MAKE Football Team - Panneau de Contrôle",
         "btn_stop": "⏹️ Arrêter le Match (Auto-Play)",
         "btn_start": "▶️ Démarrer le Match (Auto-Play)",
         "prompt_hdr": "📝 Ingénierie des Prompts en Direct",
@@ -63,14 +64,14 @@ TRANSLATIONS = {
         "mel_lbl": "🔵 Stratégie de MEL (Défenseuse Bleue) :",
         "btn_reset": "🔄 Réinitialiser le Ballon",
         "debug_hdr": "🖥️ Console de Débogage (Sortie JSON)",
-        "sim_title": "🏟️ Simulation en Direct",
+        "sim_title": "🏟️ Simulation en Direct MAKE",
         "time": "Temps",
         "live": "Match en Direct",
-        "score_red": "ROUGE",
-        "score_blue": "BLEU"
+        "score_red": "MAKE ROUGE",
+        "score_blue": "MAKE BLEU"
     },
     "Español": {
-        "panel_title": "⚽ Panel de Control de Agentes",
+        "panel_title": "⚽ MAKE Football Team - Panel de Control",
         "btn_stop": "⏹️ Detener Partido (Auto-Play)",
         "btn_start": "▶️ Iniciar Partido (Auto-Play)",
         "prompt_hdr": "📝 Ingeniería de Prompts en Vivo",
@@ -79,14 +80,14 @@ TRANSLATIONS = {
         "mel_lbl": "🔵 Estrategia de MEL (Defensora Azul):",
         "btn_reset": "🔄 Reiniciar Balón",
         "debug_hdr": "🖥️ Consola de Depuración (JSON en Vivo)",
-        "sim_title": "🏟️ Simulación en Vivo",
+        "sim_title": "🏟️ Simulación en Vivo MAKE",
         "time": "Tiempo",
         "live": "Partido en Vivo",
-        "score_red": "ROJO",
-        "score_blue": "AZUL"
+        "score_red": "MAKE ROJO",
+        "score_blue": "MAKE AZUL"
     },
     "Polski": {
-        "panel_title": "⚽ Panel Sterowania Agentami",
+        "panel_title": "⚽ MAKE Football Team - Panel Sterowania",
         "btn_stop": "⏹️ Zatrzymaj Mecz (Auto-Play)",
         "btn_start": "▶️ Uruchom Mecz (Auto-Play)",
         "prompt_hdr": "📝 Inżynieria Promptów na Żywo",
@@ -95,15 +96,14 @@ TRANSLATIONS = {
         "mel_lbl": "🔵 Strategia MEL (Niebieski Obrońca):",
         "btn_reset": "🔄 Resetuj Piłkę",
         "debug_hdr": "🖥️ Konsola Debugowania (Format JSON)",
-        "sim_title": "🏟️ Symulacja na Żywo",
+        "sim_title": "🏟️ Symulacja na Żywo MAKE",
         "time": "Czas",
         "live": "Mecz na Żywo",
-        "score_red": "CZERWONI",
-        "score_blue": "NIEBIESCY"
+        "score_red": "MAKE CZERWONI",
+        "score_blue": "MAKE NIEBIESCY"
     }
 }
 
-# Local Session State for individual language selection per browser tab
 if "ui_lang" not in st.session_state:
     st.session_state.ui_lang = "English"
 
@@ -119,12 +119,20 @@ def get_shared_match():
         "score": {"Red": 0, "Blue": 0},
         "autoplay": False,
         "last_tick": 0.0,
+        "api_error": None,
         "ball": {"x": 300, "y": 200, "vx": 0, "vy": 0},
         "players": {
-            "bob_striker": {"team": "Red", "role": "Striker", "x": 200, "y": 200, "prompt": "You are Bob (Striker Red Team). Run to the ball and score into the right goal!"},
-            "red_defender": {"team": "Red", "role": "Defender", "x": 100, "y": 200, "prompt": "You are the red defender. Stay on the left side and protect your goal."},
-            "mel_defender": {"team": "Blue", "role": "Defender", "x": 400, "y": 200, "prompt": "You are Mel (Defender Blue Team). Block the red striker and push him away."},
-            "blue_striker": {"team": "Blue", "role": "Striker", "x": 500, "y": 200, "prompt": "You are the blue striker. Get the ball and score into the left goal!"}
+            # --- TEAM RED (MAKE RED) ---
+            "red_striker": {"team": "Red", "role": "Striker", "x": 250, "y": 150, "prompt": "You are the Red Striker. Get the ball and score into the right goal!"},
+            "red_midfielder": {"team": "Red", "role": "Midfielder", "x": 200, "y": 250, "prompt": "You are the Red Midfielder. Pass the ball to strikers and support the attack!"},
+            "red_winger": {"team": "Red", "role": "Winger", "x": 150, "y": 80, "prompt": "You are the Red Winger. Run along the wings and cross the ball forward!"},
+            "red_defender": {"team": "Red", "role": "Defender", "x": 100, "y": 200, "prompt": "You are the Red Defender. Stay back and protect your goal from blue attackers."},
+            
+            # --- TEAM BLUE (MAKE BLUE) ---
+            "blue_striker": {"team": "Blue", "role": "Striker", "x": 350, "y": 250, "prompt": "You are the Blue Striker. Get the ball and score into the left goal!"},
+            "blue_midfielder": {"team": "Blue", "role": "Midfielder", "x": 400, "y": 150, "prompt": "You are the Blue Midfielder. Support the attacks and block red midfielders!"},
+            "blue_winger": {"team": "Blue", "role": "Winger", "x": 450, "y": 320, "prompt": "You are the Blue Winger. Run up the wings and intercept red passes!"},
+            "blue_defender": {"team": "Blue", "role": "Defender", "x": 500, "y": 200, "prompt": "You are the Blue Defender. Stay on the right side and guard your goal."}
         },
         "last_llm_response": "{}"
     }
@@ -132,10 +140,10 @@ def get_shared_match():
 shared_state = get_shared_match()
 
 # =====================================================================
-# 4. ARTIFICIAL INTELLIGENCE (Asynchronous & Multilingual API requests)
+# 4. ARTIFICIAL INTELLIGENCE (Robust regex parsing for chatty LLMs)
 # =====================================================================
 async def fetch_agent_move(player_name, player_data, current_state):
-    """Queries the NVIDIA LLM for the next step, supporting any prompt language."""
+    """Queries the NVIDIA LLM and extracts clean JSON using regular expressions."""
     clean_state = {
         "time_left": current_state["time_left"],
         "ball": current_state["ball"],
@@ -148,7 +156,7 @@ async def fetch_agent_move(player_name, player_data, current_state):
         response = await ai_client.chat.completions.create(
             model="meta/llama-3.1-8b-instruct",
             messages=[
-                {"role": "system", "content": player_data["prompt"] + " Respond EXCLUSIVELY as a valid JSON object with keys 'dx' (number -5 to 5), 'dy' (number -5 to 5), and 'kick' (true/false). Do NOT write any markdown, thinking, or extra text before or after the JSON!"},
+                {"role": "system", "content": player_data["prompt"] + " Respond EXCLUSIVELY as a valid JSON object with keys 'dx' (number -5 to 5), 'dy' (number -5 to 5), and 'kick' (true/false). Do NOT write any markdown, conversational intro, or extra text!"},
                 {"role": "user", "content": user_message}
             ],
             temperature=0.1,
@@ -156,15 +164,24 @@ async def fetch_agent_move(player_name, player_data, current_state):
         )
         
         raw_content = response.choices[0].message.content.strip()
-        if raw_content.startswith("```"):
-            lines = raw_content.splitlines()
-            if lines[0].startswith("```"): lines = lines[1:]
-            if lines[-1].startswith("```"): lines = lines[:-1]
-            raw_content = "\n".join(lines).strip()
+        
+        # Extrahiert das JSON-Objekt, selbst wenn das Modell Text drumherum baut
+        match = re.search(r'\{.*\}', raw_content, re.DOTALL)
+        if match:
+            parsed_json = json.loads(match.group(0))
+            dx = float(parsed_json.get("dx", 0))
+            dy = float(parsed_json.get("dy", 0))
+            kick = bool(parsed_json.get("kick", False))
             
-        return player_name, json.loads(raw_content)
+            # Fehlerzustand zurücksetzen, wenn es einmal klappt
+            shared_state["api_error"] = None
+            return player_name, {"dx": dx, "dy": dy, "kick": kick}
+        else:
+            raise ValueError(f"No JSON object found in LLM response: '{raw_content}'")
+            
     except Exception as e:
-        print(f"❌ API Error for {player_name}: {e}")
+        # Fehler im globalen Zustand speichern, um ihn live im UI anzuzeigen
+        shared_state["api_error"] = str(e)
         return player_name, {"dx": 0, "dy": 0, "kick": False}
 
 async def run_game_tick():
@@ -181,7 +198,7 @@ async def run_game_tick():
         
         dist = ((p["x"] - shared_state["ball"]["x"])**2 + (p["y"] - shared_state["ball"]["y"])**2)**0.5
         if dist < 25 and move.get("kick", False):
-            direction = 11 if p["team"] == "Red" else -11
+            direction = 12 if p["team"] == "Red" else -12
             shared_state["ball"]["vx"] = direction
             shared_state["ball"]["vy"] = (shared_state["ball"]["y"] - p["y"]) * 0.35
 
@@ -203,7 +220,7 @@ def reset_ball():
     shared_state["ball"] = {"x": 300, "y": 200, "vx": 0, "vy": 0}
 
 # =====================================================================
-# 5. GRAPHICS ENGINE (HTML5 Canvas via JavaScript)
+# 5. GRAPHICS ENGINE (Cyber Black HTML5 Canvas)
 # =====================================================================
 def generate_pitch_html(state, t):
     players_json = json.dumps(state["players"])
@@ -211,13 +228,13 @@ def generate_pitch_html(state, t):
     score_text = f"{t['score_red']}: {state['score']['Red']} | {t['score_blue']}: {state['score']['Blue']}"
     
     return f"""
-    <div style="background: #1e1e1e; padding: 15px; border-radius: 10px; color: white; font-family: sans-serif;">
+    <div style="background: #0f0f12; padding: 15px; border-radius: 10px; color: white; font-family: sans-serif;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; font-size: 16px;">
             <span>⏱️ {t['time']}: {state['time_left']:.1f}s</span>
-            <span style="color: #ffcc00; font-size: 18px;">{score_text}</span>
-            <span style="color: #4caf50;">{t['live']}</span>
+            <span style="color: #00e676; font-size: 18px; font-family: monospace; letter-spacing: 1px;">{score_text}</span>
+            <span style="color: #ff9100;">{t['live']}</span>
         </div>
-        <canvas id="field" width="600" height="400" style="background: #2e7d32; border: 4px solid #fff; border-radius: 5px; width: 100%; height: auto;"></canvas>
+        <canvas id="field" width="600" height="400" style="background: #121214; border: 3px solid #2d2d34; border-radius: 8px; width: 100%; height: auto;"></canvas>
     </div>
     <script>
         const canvas = document.getElementById('field');
@@ -225,25 +242,44 @@ def generate_pitch_html(state, t):
         const players = {players_json};
         const ball = {ball_json};
 
-        ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 3;
+        // Elegant semi-transparent white lines on dark background
+        ctx.strokeStyle = "rgba(255,255,255,0.2)"; ctx.lineWidth = 2.5;
         ctx.beginPath(); ctx.moveTo(300, 0); ctx.lineTo(300, 400); ctx.stroke();
         ctx.beginPath(); ctx.arc(300, 200, 50, 0, 2*Math.PI); ctx.stroke();
         
         ctx.strokeRect(0, 100, 60, 200); ctx.strokeRect(540, 100, 60, 200); 
-        ctx.fillStyle = "rgba(255,255,255,0.2)";
+        ctx.fillStyle = "rgba(255,255,255,0.03)";
         ctx.fillRect(0, 120, 10, 160); ctx.fillRect(590, 120, 10, 160);
 
-        ctx.beginPath(); ctx.arc(ball.x, ball.y, 7, 0, 2*Math.PI);
-        ctx.fillStyle = "white"; ctx.fill(); ctx.strokeStyle = "black"; ctx.lineWidth = 1.5; ctx.stroke();
+        // Subtly drawing "MAKE FOOTBALL TEAM" as a modern pitch watermark
+        ctx.fillStyle = "rgba(255, 255, 255, 0.06)";
+        ctx.font = "bold 24px 'Impact', sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("MAKE FOOTBALL TEAM", 300, 210);
 
+        // Glowing white Ball
+        ctx.beginPath(); ctx.arc(ball.x, ball.y, 7, 0, 2*Math.PI);
+        ctx.fillStyle = "#ffffff"; ctx.fill(); 
+        ctx.strokeStyle = "#ff9100"; ctx.lineWidth = 1.5; ctx.stroke();
+
+        // Neon Glowing Players
         for (let name in players) {{
             let p = players[name];
-            ctx.beginPath(); ctx.arc(p.x, p.y, 13, 0, 2*Math.PI);
-            ctx.fillStyle = p.team === "Red" ? "#dc3545" : "#007bff";
-            ctx.fill(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke();
+            ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, 2*Math.PI);
             
-            ctx.fillStyle = "white"; ctx.font = "bold 11px sans-serif"; ctx.textAlign = "center";
-            ctx.fillText(name.split('_')[0].toUpperCase(), p.x, p.y - 18);
+            // Ultra neon colors: Electric Red vs Neon Cyber Blue
+            ctx.fillStyle = p.team === "Red" ? "#ff1744" : "#00b0ff";
+            ctx.fill(); 
+            ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.stroke();
+            
+            // Text Labels above players
+            ctx.fillStyle = "rgba(255,255,255,0.85)"; 
+            ctx.font = "9px sans-serif"; 
+            ctx.textAlign = "center";
+            
+            // Shortening the role name to display nicely
+            let displayRole = name.split('_')[1].toUpperCase();
+            ctx.fillText(displayRole, p.x, p.y - 16);
         }}
     </script>
     """
@@ -254,13 +290,17 @@ def generate_pitch_html(state, t):
 col_left, col_right = st.columns([1, 1.2])
 
 with col_left:
-    # Language Picker (only changes the UI locally for this specific user tab!)
     st.session_state.ui_lang = st.selectbox(
         "🌐 Interface Language / Langue / Sprache", 
         ["English", "Deutsch", "Français", "Español", "Polski"]
     )
     
     st.title(lang["panel_title"])
+    
+    # Live-Fehlermeldung direkt auf dem Bildschirm anzeigen!
+    if "api_error" in shared_state and shared_state["api_error"]:
+        st.error(f"⚠️ API Error: {shared_state['api_error']}")
+        st.info("💡 Please verify your NVIDIA API Key in your Streamlit Cloud Secrets!")
     
     btn_label = lang["btn_stop"] if shared_state["autoplay"] else lang["btn_start"]
     if st.button(btn_label, use_container_width=True, type="primary" if not shared_state["autoplay"] else "secondary"):
@@ -270,12 +310,30 @@ with col_left:
     st.subheader(lang["prompt_hdr"])
     st.caption(lang["prompt_cap"])
     
-    shared_state["players"]["bob_striker"]["prompt"] = st.text_area(
-        lang["bob_lbl"], shared_state["players"]["bob_striker"]["prompt"], height=65
-    )
-    shared_state["players"]["mel_defender"]["prompt"] = st.text_area(
-        lang["mel_lbl"], shared_state["players"]["mel_defender"]["prompt"], height=65
-    )
+    # Dynamic tabs to handle 8 players without cluttering the screen
+    tab_red, tab_blue = st.tabs(["🔴 MAKE RED Team", "🔵 MAKE BLUE Team"])
+    
+    with tab_red:
+        for name, p in list(shared_state["players"].items()):
+            if p["team"] == "Red":
+                role_display = name.split('_')[1].upper()
+                shared_state["players"][name]["prompt"] = st.text_area(
+                    f"🔴 Red {role_display} Strategy:",
+                    value=p["prompt"],
+                    key=f"input_{name}",
+                    height=65
+                )
+                
+    with tab_blue:
+        for name, p in list(shared_state["players"].items()):
+            if p["team"] == "Blue":
+                role_display = name.split('_')[1].upper()
+                shared_state["players"][name]["prompt"] = st.text_area(
+                    f"🔵 Blue {role_display} Strategy:",
+                    value=p["prompt"],
+                    key=f"input_{name}",
+                    height=65
+                )
 
     if st.button(lang["btn_reset"], use_container_width=True):
         reset_ball()
@@ -287,7 +345,7 @@ with col_left:
 with col_right:
     st.title(lang["sim_title"])
     html_pitch = generate_pitch_html(shared_state, lang)
-    components.html(html_pitch, height=490)
+    st.iframe(html_pitch, height=490)
 
 # =====================================================================
 # 7. SERVER GAME LOOP
