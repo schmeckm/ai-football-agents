@@ -1,100 +1,179 @@
-# MAKE Football Team
+"""
+MAKE Football Team - FastAPI Backend
+Endpoint /api/move forwards game state to NVIDIA llama-3.1-8b-instruct.
+"""
+import os
+import re
+import sys
+import json
+from typing import Dict
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import httpx
 
-AI-driven football simulation. Two teams of three LLM-controlled players square off on an 800×500 pitch. Each player gets a natural-language prompt that determines their behaviour. Empty prompt → player is inactive.
+NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY")
+if not NVIDIA_API_KEY:
+    raise RuntimeError("NVIDIA_API_KEY environment variable is required")
 
-- **Backend:** FastAPI + httpx, forwards game state to NVIDIA `llama-3.1-8b-instruct`
-- **Frontend:** vanilla HTML/JS/Canvas, 60 FPS via `requestAnimationFrame`, smooth player motion between LLM updates
-- **Architecture:** game state lives in the browser; backend is a thin LLM proxy
+NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
+MODEL_ID = os.environ.get("MODEL_ID", "meta/llama-3.1-8b-instruct")
 
-## Local quickstart
+app = FastAPI(title="MAKE Football Team")
 
-```bash
-export NVIDIA_API_KEY=nvapi-...
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000
-# open http://localhost:8000
-```
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-## Docker
 
-```bash
-docker build -t make-football .
-docker run -p 8000:8000 -e NVIDIA_API_KEY=nvapi-... make-football
-```
+def log(msg: str):
+    print(msg, file=sys.stderr, flush=True)
 
-## Portainer deployment via GitHub
 
-1. **Push this repo to GitHub** (private is fine)
-2. In Portainer:
-   - **Stacks → Add stack**
-   - Build method: **Repository**
-   - Repository URL: `https://github.com/your-user/make-football`
-   - Repository reference: `refs/heads/main` (or your branch)
-   - Compose path: `docker-compose.yml`
-   - If repo is **private**: tick *Authentication* and add a GitHub Personal Access Token (`repo` scope)
-   - **Environment variables** section:
-     - `NVIDIA_API_KEY` = `nvapi-xxxxxxxx`
-     - `MODEL_ID` = `meta/llama-3.1-8b-instruct` (optional)
-   - **Deploy the stack**
-3. On code update: in Portainer open the stack → **Pull and redeploy**
-4. Optional: enable **GitOps updates** (Portainer polls the repo every N minutes)
+class Player(BaseModel):
+    team: str
+    x: float
+    y: float
+    prompt: str
 
-Stack ends up at `http://<portainer-host>:8000`.
 
-## Nginx reverse proxy snippet
+class MoveRequest(BaseModel):
+    ball: Dict[str, float]
+    players: Dict[str, Player]
+    team_red_name: str = "Make Red"
+    team_blue_name: str = "Make Blue"
+    field_w: int = 800
+    field_h: int = 500
 
-If you want to expose it under a subdomain (e.g. `football.example.ch`) with HTTPS, add to your Nginx config:
 
-```nginx
-server {
-    listen 443 ssl http2;
-    server_name football.example.ch;
+class MoveResponse(BaseModel):
+    moves: Dict[str, Dict]
+    debug: str = ""
 
-    ssl_certificate     /etc/letsencrypt/live/football.example.ch/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/football.example.ch/privkey.pem;
 
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 30s;
+def zero_moves(players: Dict[str, Player]) -> Dict[str, Dict]:
+    return {n: {"x": 0, "y": 0, "k": False} for n in players.keys()}
+
+
+def clamp_move(mv: Dict) -> Dict:
+    """Clamp to -5..+5. Llama sometimes returns absolute coords; this saves the game."""
+    try:
+        x = float(mv.get("x", 0) or 0)
+        y = float(mv.get("y", 0) or 0)
+    except (TypeError, ValueError):
+        x, y = 0.0, 0.0
+    return {
+        "x": max(-5.0, min(5.0, x)),
+        "y": max(-5.0, min(5.0, y)),
+        "k": bool(mv.get("k", False)),
     }
-}
-```
 
-## How it works
 
-1. Browser keeps the game state and runs physics + rendering at 60 FPS
-2. Every ~900 ms the browser POSTs `/api/move` with current ball + player positions and prompts
-3. Backend builds a compact system prompt, calls NVIDIA, parses the returned JSON, returns it
-4. Browser applies the new `dx`/`dy`/`kick` decisions; players keep moving in those directions until the next update
-5. Empty prompts → player filtered out of the LLM request, stays idle on the pitch (transparent + dashed border)
+def extract_json(raw: str) -> Dict:
+    """Strip markdown fences, find the largest {...} block, parse it."""
+    cleaned = re.sub(r"```(?:json)?\s*", "", raw)
+    cleaned = re.sub(r"```", "", cleaned)
+    m = re.search(r"\{.*\}", cleaned, re.DOTALL)
+    if not m:
+        raise ValueError("no JSON object found")
+    return json.loads(m.group(0))
 
-## Architecture overview
 
-```
-┌─────────────────────────┐         ┌──────────────────────────┐         ┌──────────────────┐
-│ Browser                 │ POST    │ FastAPI (this container) │  POST   │ NVIDIA Build API │
-│ - game loop @ 60 FPS    │ ──────► │ /api/move                │ ──────► │ llama-3.1-8b     │
-│ - canvas render         │         │ - compose prompt         │         │                  │
-│ - prompt editors        │ ◄────── │ - call NVIDIA            │ ◄────── │                  │
-│ - LLM call every 900 ms │  JSON   │ - parse JSON             │  JSON   │                  │
-└─────────────────────────┘         └──────────────────────────┘         └──────────────────┘
-```
+@app.post("/api/move", response_model=MoveResponse)
+async def get_moves(req: MoveRequest):
+    active = {n: p for n, p in req.players.items() if p.prompt.strip()}
+    if not active:
+        return MoveResponse(moves=zero_moves(req.players), debug="no active players")
 
-## Tuning
+    strategies = "\n".join(
+        f"- {name} (team {p.team}): {p.prompt}" for name, p in active.items()
+    )
+    positions = ", ".join(
+        f"{n}=({int(p.x)},{int(p.y)})" for n, p in active.items()
+    )
+    ball_pos = f"({int(req.ball.get('x', 0))},{int(req.ball.get('y', 0))})"
 
-- `LLM_INTERVAL_MS` in `index.html` — how often to call the LLM (lower = more reactive, more requests)
-- `PLAYER_SPEED_SCALE` in `index.html` — overall player movement speed
-- `max_tokens` in `main.py` — LLM response budget (currently 140, enough for 6 players)
-- `MODEL_ID` env var — swap to a different model without code change
+    system = (
+        "You control football players. Output ONE JSON object only, no prose, no markdown.\n\n"
+        'FORMAT: {"player_name":{"x":<dx>,"y":<dy>,"k":<bool>}}\n\n'
+        "CRITICAL — read carefully:\n"
+        "* 'x' is a movement STEP, a small integer between -5 and +5. NOT a field coordinate.\n"
+        "* 'y' is a movement STEP, a small integer between -5 and +5. NOT a field coordinate.\n"
+        "* Positive x means move RIGHT. Negative x means move LEFT.\n"
+        "* Positive y means move DOWN. Negative y means move UP.\n"
+        "* 'k' = true only if the player is right next to the ball and should kick this tick.\n"
+        "* NEVER output numbers like 200, 400, 780. ALWAYS small numbers between -5 and +5.\n\n"
+        f"FIELD: {req.field_w} wide, {req.field_h} tall. "
+        f"Red team ('{req.team_red_name}') attacks the RIGHT goal at x={req.field_w}. "
+        f"Blue team ('{req.team_blue_name}') attacks the LEFT goal at x=0.\n\n"
+        "EXAMPLES:\n"
+        '* Striker at (200,250), ball at (300,200) -> {"x":4,"y":-2,"k":false}\n'
+        '* Striker at (350,200), ball at (355,205) -> {"x":1,"y":1,"k":true}\n'
+        '* Player should stand still -> {"x":0,"y":0,"k":false}\n\n'
+        "PLAYER STRATEGIES:\n" + strategies
+    )
+    user = f"State: ball at {ball_pos}, players at {positions}. Output JSON now."
 
-## Troubleshooting
+    payload = {
+        "model": MODEL_ID,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "temperature": 0.2,
+        "max_tokens": 180,
+    }
 
-- **`NVIDIA_API_KEY environment variable is required`** → env var not set on the container
-- **`API error: HTTP 429`** → rate limit. Increase `LLM_INTERVAL_MS` or upgrade tier
-- **Players don't move** → check `/health` endpoint, then watch the debug console in the UI for parse errors
-- **No moves coming back** → some Llama responses occasionally miss a player. They get a zero-move fallback so the game keeps running
+    raw = ""
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            r = await client.post(
+                NVIDIA_URL,
+                headers={
+                    "Authorization": f"Bearer {NVIDIA_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+            )
+            r.raise_for_status()
+            data = r.json()
+            raw = data["choices"][0]["message"]["content"].strip()
+            parsed = extract_json(raw)
+
+            cleaned = {}
+            for n in req.players.keys():
+                if n in parsed and isinstance(parsed[n], dict):
+                    cleaned[n] = clamp_move(parsed[n])
+                else:
+                    cleaned[n] = {"x": 0, "y": 0, "k": False}
+
+            sample = next(iter(cleaned.values()))
+            log(f"[move] OK active={len(active)} sample={sample}")
+            return MoveResponse(moves=cleaned, debug=raw[:500])
+
+    except httpx.HTTPStatusError as e:
+        err = f"HTTP {e.response.status_code}: {e.response.text[:160]}"
+        log(f"[move] {err}")
+        return MoveResponse(moves=zero_moves(req.players), debug=f"ERROR: {err}")
+    except Exception as e:
+        err = f"{type(e).__name__}: {str(e)[:160]}"
+        log(f"[move] ERROR: {err} | raw={raw[:200]}")
+        return MoveResponse(moves=zero_moves(req.players), debug=f"ERROR: {err}")
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "model": MODEL_ID}
+
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/")
+async def root():
+    return FileResponse("static/index.html")
