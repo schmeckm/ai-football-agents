@@ -10,7 +10,6 @@ from openai import OpenAI  # Synchroner Client für maximale Stabilität!
 NVIDIA_API_KEY = st.secrets["NVIDIA_API_KEY"]
 
 # Synchroner Client verhindert jegliche Streamlit-Event-Loop-Konflikte
-# Bereinigte URLs ohne störende Markdown-Link-Formatierungen!
 ai_client = OpenAI(
     base_url="https://integrate.api.nvidia.com/v1",
     api_key=NVIDIA_API_KEY
@@ -543,6 +542,27 @@ with col_left:
     if st.button(lang["btn_reset"], use_container_width=True):
         reset_ball()
         st.rerun()
+
+    # Die neu eingeführte Live-Übersicht aller Prompts
+    with st.expander(
+        "📋 " + (
+            "Aktive Strategien aller Spieler" if st.session_state.ui_lang == "Deutsch" else
+            "Stratégies actives des joueurs" if st.session_state.ui_lang == "Français" else
+            "Estrategias activas de jugadores" if st.session_state.ui_lang == "Español" else
+            "Aktywne strategie graczy" if st.session_state.ui_lang == "Polski" else
+            "Live Synced Strategies (All Players)"
+        ),
+        expanded=False
+    ):
+        active_prompts = {
+            name.upper(): {
+                "Team": "🔴 RED (MAKE)" if data["team"] == "Red" else "🔵 BLUE (MAKE)",
+                "Role": data["role"].upper(),
+                "Strategy": data["prompt"]
+            }
+            for name, data in shared_state["players"].items()
+        }
+        st.json(active_prompts)
 
     st.subheader(lang["debug_hdr"])
     st.code(shared_state["last_llm_response"], language="json")
