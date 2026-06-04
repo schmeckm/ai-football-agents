@@ -77,22 +77,44 @@ st.markdown("""
             margin-bottom: 4px !important;
         }
         
-        /* Modernisiertes Expander/Akkordeon Design für die Spieler */
+        /* RADIKALER FIX FÜR DIE EXPANDER (KEINE WEISSEN BALKEN MEHR!) */
         div[data-testid="stExpander"] {
-            background-color: #16171f !important;
+            background-color: #12131a !important;
             border: 1px solid #252836 !important;
             border-radius: 8px !important;
-            margin-bottom: 8px !important;
-            overflow: hidden;
-            transition: all 0.2s ease;
+            margin-bottom: 10px !important;
+            overflow: hidden !important;
         }
-        div[data-testid="stExpander"]:hover {
-            border-color: #3e445b !important;
-        }
-        div[data-testid="stExpander"] [data-testid="stExpanderHeader"] {
-            font-weight: bold !important;
+        
+        /* Zwingt den Header des Expanders (summary) dunkel zu sein */
+        div[data-testid="stExpander"] details summary {
+            background-color: #1a1c23 !important;
             color: #ffffff !important;
-            padding: 10px 15px !important;
+            border-bottom: 1px solid #252836 !important;
+            padding: 12px 15px !important;
+        }
+        
+        /* Verhindert den Streamlit-Standard-Fokus-Effekt mit weißem Rahmen */
+        div[data-testid="stExpander"] details summary:focus,
+        div[data-testid="stExpander"] details summary:active {
+            background-color: #1a1c23 !important;
+            color: #00e676 !important;
+            outline: none !important;
+        }
+
+        /* Text im geschlossenen/geöffneten Zustand sichtbar machen */
+        div[data-testid="stExpander"] details summary span {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+        }
+        div[data-testid="stExpander"] details summary:hover span {
+            color: #00e676 !important;
+        }
+
+        /* Hintergrund des aufgeklappten Containers abdunkeln */
+        div[data-testid="stExpander"] [role="transition-container"] {
+            background-color: #12131a !important;
+            padding: 15px !important;
         }
         
         /* Tabs (Team-Reiter) */
@@ -529,3 +551,5 @@ if shared_state["autoplay"] and shared_state["time_left"] > 0:
 elif shared_state["autoplay"] is False:
     time.sleep(1.0)
     st.rerun()
+```
+eof
