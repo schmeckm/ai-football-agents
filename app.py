@@ -1,12 +1,11 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import time
 import json
 import re
-from openai import OpenAI
+from openai import OpenAI  # Synchroner Client für maximale Stabilität!
 
 # =====================================================================
-# 1. API
+# 1. API-KONFIGURATION & GLOBALE EINSTELLUNGEN
 # =====================================================================
 NVIDIA_API_KEY = st.secrets["NVIDIA_API_KEY"]
 
@@ -19,20 +18,25 @@ ai_client = OpenAI(
 st.set_page_config(layout="wide", page_title="MAKE Football Team - AI Match", page_icon="⚽")
 
 # =====================================================================
-# 2. CSS
+# 2. RADIKALES CUSTOM CSS (FIXT ALLE WEISSEN FLÄCHEN & STYLT DAS DASHBOARD)
 # =====================================================================
 st.markdown("""
 <style>
+/* Globaler Hintergrund & Schriftart */
 .stApp {
     background-color: #0b0c10 !important;
     color: #f5f5f7 !important;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
+
+/* Titel & Überschriften Kontrast */
 h1, h2, h3, h4, h5, h6 {
     color: #ffffff !important;
     font-weight: 800 !important;
     letter-spacing: -0.7px;
 }
+
+/* Edle Container-Boxen für die linke und rechte Spalte */
 div[data-testid="column"] {
     background-color: #12131a;
     padding: 20px !important;
@@ -41,6 +45,8 @@ div[data-testid="column"] {
     box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     margin-bottom: 20px;
 }
+
+/* Dropdowns, Texteingaben & Farbwähler im Setup-Panel */
 .stSelectbox div[data-baseweb="select"],
 .stTextInput input, .stNumberInput input {
     background-color: #1a1c23 !important;
@@ -48,6 +54,8 @@ div[data-testid="column"] {
     border: 1px solid #2f3346 !important;
     border-radius: 8px !important;
 }
+
+/* Textareas für die Prompts */
 .stTextArea textarea {
     background-color: #090a0f !important;
     color: #e4e6eb !important;
@@ -60,12 +68,18 @@ div[data-testid="column"] {
     border-color: #00e676 !important;
     box-shadow: 0 0 8px rgba(0, 230, 118, 0.2) !important;
 }
+
+/* Labels über den Eingabefeldern */
 label[data-testid="stWidgetLabel"] {
     color: #8a90a6 !important;
     font-weight: 600 !important;
     font-size: 13.5px !important;
     margin-bottom: 4px !important;
 }
+
+/* ==========================================
+   RADIKALE EXPANDER-FIXES (KEINE WEISSEN BOXEN MEHR!)
+   ========================================== */
 div[data-testid="stExpander"] {
     background-color: #12131a !important;
     border: 1px solid #252836 !important;
@@ -73,19 +87,62 @@ div[data-testid="stExpander"] {
     margin-bottom: 10px !important;
     overflow: hidden !important;
 }
+
+/* Verhindert jeglichen weißen Hintergrund im Details-Container */
+div[data-testid="stExpander"] details {
+    background-color: #12131a !important;
+}
+
+/* Erzwingt dunklen Hintergrund und weiße Schrift für den Expander-Header */
 div[data-testid="stExpander"] details summary {
     background-color: #1a1c23 !important;
     color: #ffffff !important;
     border-bottom: 1px solid #252836 !important;
     padding: 12px 15px !important;
 }
-div[data-testid="stExpander"] details summary span { color: #ffffff !important; font-weight: 700 !important; }
-div[data-testid="stExpander"] details summary:hover span { color: #00e676 !important; }
-div[data-testid="stExpander"] [role="transition-container"] {
+
+/* Text-Farbe im summary-Tag erzwingen */
+div[data-testid="stExpander"] details summary span,
+div[data-testid="stExpander"] details summary p {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+/* Hover-Effekt im Header */
+div[data-testid="stExpander"] details summary:hover,
+div[data-testid="stExpander"] details summary:hover span {
+    color: #00e676 !important;
+}
+
+/* Inneren Container abdunkeln */
+div[data-testid="stExpander"] [role="transition-container"],
+div[data-testid="stExpander"] .streamlit-expanderContent {
     background-color: #12131a !important;
     padding: 15px !important;
+    color: #ffffff !important;
 }
-div[data-testid="stExpander"] svg { fill: #00e676 !important; color: #00e676 !important; }
+
+/* Spezifische Overrides für neuere Streamlit-Themes */
+.streamlit-expanderHeader,
+[data-testid="stExpanderHeader"] {
+    background-color: #1a1c23 !important;
+    color: #ffffff !important;
+}
+
+[data-testid="stExpanderHeader"] span,
+[data-testid="stExpanderHeader"] p {
+    color: #ffffff !important;
+}
+
+/* Grünes Icon für die einklappbaren Boxen */
+div[data-testid="stExpander"] svg {
+    fill: #00e676 !important;
+    color: #00e676 !important;
+}
+
+/* ==========================================
+   TABS, BUTTONS & CODE BLOCK STYLING
+   ========================================== */
 button[data-baseweb="tab"] {
     color: #8a90a6 !important;
     font-size: 14.5px !important;
@@ -98,6 +155,8 @@ button[data-baseweb="tab"][aria-selected="true"] {
     color: #00e676 !important;
     border-bottom: 3px solid #00e676 !important;
 }
+
+/* Normale Buttons & Sekundär-Knöpfe */
 div.stButton > button[kind="secondary"], div.stButton > button:not([kind]) {
     background: linear-gradient(135deg, #16171e 0%, #1d1f2a 100%) !important;
     color: #ffffff !important;
@@ -117,6 +176,8 @@ div.stButton > button[kind="secondary"]:hover, div.stButton > button:not([kind])
     box-shadow: 0 0 20px rgba(0, 230, 118, 0.3) !important;
     transform: translateY(-1.5px);
 }
+
+/* Stopp/Primär-Button */
 div.stButton > button[kind="primary"] {
     background: linear-gradient(135deg, #2a0d12 0%, #3a1218 100%) !important;
     color: #ff5a6c !important;
@@ -132,6 +193,8 @@ div.stButton > button[kind="primary"]:hover {
     color: #ff1744 !important;
     box-shadow: 0 0 20px rgba(255, 23, 68, 0.35) !important;
 }
+
+/* Debug Konsole */
 div[data-testid="stCodeBlock"] {
     background-color: #07080a !important;
     border: 1px solid #1a1c23 !important;
@@ -150,7 +213,7 @@ NATIONS = {
     "Brazil":      {"flag": "🇧🇷", "color": "#ffdf00"},
     "Croatia":     {"flag": "🇭🇷", "color": "#171796"},
     "Denmark":     {"flag": "🇩🇰", "color": "#c8102e"},
-    "England":     {"flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "color": "#ffffff"},
+    "England":     {"flag": "🏴", "color": "#ffffff"},
     "France":      {"flag": "🇫🇷", "color": "#0055a4"},
     "Germany":     {"flag": "🇩🇪", "color": "#1c1c1c"},
     "Italy":       {"flag": "🇮🇹", "color": "#0066cc"},
@@ -170,14 +233,14 @@ NATIONS = {
 NATION_NAMES = list(NATIONS.keys())
 
 # =====================================================================
-# 4. ÜBERSETZUNGEN
+# 4. MEHRSPRACHIGE TEXTKONFIGURATION
 # =====================================================================
 TRANSLATIONS = {
     "English": {
         "panel_title": "MAKE Football Team - Control Panel",
         "btn_stop": "⏹️ STOP MATCH", "btn_start": "▶️ START MATCH",
         "prompt_hdr": "Live Prompt Engineering",
-        "prompt_cap": "Changes here affect players live on the next LLM tick.",
+        "prompt_cap": "Changes here affect players live on the next LLM tick. Use Ctrl+Enter or click outside to save.",
         "btn_reset": "🔄 RESET BALL TO CENTER",
         "debug_hdr": "Debug Console",
         "sim_title": "Live Simulation",
@@ -196,7 +259,7 @@ TRANSLATIONS = {
         "panel_title": "MAKE Football Team - Kontrollzentrum",
         "btn_stop": "⏹️ SPIEL STOPPEN", "btn_start": "▶️ SPIEL STARTEN",
         "prompt_hdr": "Live Prompt Engineering",
-        "prompt_cap": "Änderungen wirken beim nächsten LLM-Tick auf die Spieler.",
+        "prompt_cap": "Änderungen wirken beim nächsten LLM-Tick. Nutze Strg+Enter oder klicke außerhalb zum Speichern.",
         "btn_reset": "🔄 BALL ZURÜCKSETZEN",
         "debug_hdr": "Debug-Konsole",
         "sim_title": "Live-Simulation",
@@ -215,7 +278,7 @@ TRANSLATIONS = {
         "panel_title": "MAKE Football Team - Panneau de Contrôle",
         "btn_stop": "⏹️ ARRÊTER LE MATCH", "btn_start": "▶️ DÉMARRER LE MATCH",
         "prompt_hdr": "Ingénierie des Prompts en Direct",
-        "prompt_cap": "Les modifications s'appliquent au prochain tick du LLM.",
+        "prompt_cap": "Les modifications s'appliquent au prochain tick du LLM. Utilisez Ctrl+Entrée.",
         "btn_reset": "🔄 RÉINITIALISER LE BALLON",
         "debug_hdr": "Console de Débogage",
         "sim_title": "Simulation en Direct",
@@ -234,7 +297,7 @@ TRANSLATIONS = {
         "panel_title": "MAKE Football Team - Panel de Control",
         "btn_stop": "⏹️ DETENER PARTIDO", "btn_start": "▶️ INICIAR PARTIDO",
         "prompt_hdr": "Ingeniería de Prompts en Vivo",
-        "prompt_cap": "Los cambios se aplican en el próximo tick del LLM.",
+        "prompt_cap": "Los cambios se aplican en el próximo tick del LLM. Pulsa Ctrl+Enter.",
         "btn_reset": "🔄 REINICIAR BALÓN",
         "debug_hdr": "Consola de Depuración",
         "sim_title": "Simulación en Vivo",
@@ -253,7 +316,7 @@ TRANSLATIONS = {
         "panel_title": "MAKE Football Team - Panel Sterowania",
         "btn_stop": "⏹️ ZATRZYMAJ MECZ", "btn_start": "▶️ URUCHOM MECZ",
         "prompt_hdr": "Inżynieria Promptów na Żywo",
-        "prompt_cap": "Zmiany zostaną zastosowane przy następnym ticku LLM.",
+        "prompt_cap": "Zmiany zostaną zastosowane przy następnym ticku LLM. Naciśnij Ctrl+Enter.",
         "btn_reset": "🔄 RESETUJ PIŁKĘ",
         "debug_hdr": "Konsola Debugowania",
         "sim_title": "Symulacja na Żywo",
@@ -277,7 +340,7 @@ if "ui_lang" not in st.session_state:
 # 5. SPIELER-LAYOUT & PROMPT-GENERATOR
 # =====================================================================
 INITIAL_POSITIONS = {
-    "red_striker":     {"team": "Red",  "role": "Striker",    "x": 200, "y": 150},
+    "red_striker":      {"team": "Red",  "role": "Striker",    "x": 200, "y": 150},
     "red_midfielder":  {"team": "Red",  "role": "Midfielder", "x": 180, "y": 250},
     "red_winger":      {"team": "Red",  "role": "Winger",     "x": 150, "y":  80},
     "red_defender":    {"team": "Red",  "role": "Defender",   "x": 100, "y": 200},
@@ -307,7 +370,7 @@ def build_players(name_red, name_blue):
     }
 
 # =====================================================================
-# 6. SHARED STATE
+# 6. GLOBALER SHARED STATE
 # =====================================================================
 @st.cache_resource
 def get_shared_match():
@@ -324,12 +387,13 @@ def get_shared_match():
         "ball_trail": [],
         "team_red_name":    name_red,
         "team_red_nation":  "Switzerland",
-        "team_red_color":   "#ff1744",
+        "team_red_color":    "#ff1744",
         "team_blue_name":   name_blue,
         "team_blue_nation": "Germany",
         "team_blue_color":  "#00b0ff",
         "players": build_players(name_red, name_blue),
         "last_llm_response": "{}",
+        "last_successful_moves": {},
         "info_message": "",
     }
 
@@ -356,6 +420,7 @@ def apply_match_setup(name_red, nation_red, color_red, name_blue, nation_blue, c
         shared_state["team_red_name"], shared_state["team_blue_name"]
     )
     shared_state["last_llm_response"] = "{}"
+    shared_state["last_successful_moves"] = {}
     shared_state["api_error"]         = None
     shared_state["info_message"]      = "applied"
 
@@ -364,7 +429,7 @@ def reset_ball():
     shared_state["ball_trail"] = []
 
 # =====================================================================
-# 8. LLM
+# 8. KÜNSTLICHE INTELLIGENZ (Rate-Limit-sichere Einzelabfrage)
 # =====================================================================
 def fetch_all_agent_moves(current_state):
     name_red  = current_state["team_red_name"]
@@ -400,37 +465,48 @@ def fetch_all_agent_moves(current_state):
         raw = response.choices[0].message.content.strip()
         match = re.search(r'\{.*\}', raw, re.DOTALL)
         if not match:
-            raise ValueError(f"No JSON in: {raw[:140]}")
+            raise ValueError(f"No JSON in response: {raw[:140]}")
         parsed = json.loads(match.group(0))
+        
+        # Erfolgreiche Spielzüge zwischenspeichern (für Rate-Limit-Fallback)
+        shared_state["last_successful_moves"] = parsed
         shared_state["api_error"] = None
         return parsed
     except Exception as e:
         shared_state["api_error"] = str(e)[:160]
+        # Fallback: Wenn wir in ein Rate Limit (429) laufen, nutzen wir einfach die letzten funktionierenden Bewegungen!
+        if "last_successful_moves" in shared_state and shared_state["last_successful_moves"]:
+            return shared_state["last_successful_moves"]
         return {n: {"x": 0, "y": 0, "k": False} for n in current_state["players"].keys()}
 
 # =====================================================================
-# 9. PHYSIK
+# 9. SPIELPHYSIK (Entkoppelte KI-Laufzeit)
 # =====================================================================
-LLM_THROTTLE  = 1.2
-TICK_INTERVAL = 0.10
+LLM_THROTTLE  = 1.5   # KI denkt nur alle 1,5 Sekunden nach (Verhindert 429er Fehler!)
+TICK_INTERVAL = 0.10  # Spielfeld aktualisiert sich butterweich alle 100ms
 
 def run_game_tick():
     now = time.time()
 
+    # KI-Berechnung anwerfen, wenn der Throttle-Timer abgelaufen ist
     if now - shared_state["last_llm_call"] > LLM_THROTTLE:
         shared_state["last_llm_call"] = now
         moves = fetch_all_agent_moves(shared_state)
         shared_state["last_llm_response"] = json.dumps(moves, indent=2)
+        
+        # Bewegungsvektoren den Spielern zuweisen
         for name, p in shared_state["players"].items():
             mv = moves.get(name, {})
             p["dx"]   = float(mv.get("x", mv.get("dx", 0.0)))
             p["dy"]   = float(mv.get("y", mv.get("dy", 0.0)))
             p["kick"] = bool(mv.get("k", mv.get("kick", False)))
 
+    # Physik-Update für alle Spieler (läuft kontinuierlich weiter!)
     for p in shared_state["players"].values():
         p["x"] = max(20, min(580, p["x"] + p["dx"]))
         p["y"] = max(20, min(380, p["y"] + p["dy"]))
 
+        # Schussbereichsprüfung zum Ball
         dx = p["x"] - shared_state["ball"]["x"]
         dy = p["y"] - shared_state["ball"]["y"]
         if dx*dx + dy*dy < 625 and p["kick"]:
@@ -438,14 +514,17 @@ def run_game_tick():
             shared_state["ball"]["vx"] = direction
             shared_state["ball"]["vy"] = (shared_state["ball"]["y"] - p["y"]) * 0.35
 
+    # Ballbewegung & Reibungswiderstand
     b = shared_state["ball"]
     b["x"] += b["vx"]; b["y"] += b["vy"]
     b["vx"] *= 0.88;   b["vy"] *= 0.88
 
+    # Schweif-Effekt für den Ball
     shared_state["ball_trail"].append([round(b["x"], 1), round(b["y"], 1)])
     if len(shared_state["ball_trail"]) > 12:
         shared_state["ball_trail"].pop(0)
 
+    # Torerfassung
     if b["x"] > 580 and 120 < b["y"] < 280:
         shared_state["score"]["Red"] += 1
         reset_ball()
@@ -453,6 +532,7 @@ def run_game_tick():
         shared_state["score"]["Blue"] += 1
         reset_ball()
     else:
+        # Banden-Kollision (Abpraller)
         if b["x"] < 8 or b["x"] > 592:
             b["vx"] *= -0.5
             b["x"] = max(8, min(592, b["x"]))
@@ -463,7 +543,7 @@ def run_game_tick():
     shared_state["time_left"] = max(0.0, shared_state["time_left"] - TICK_INTERVAL)
 
 # =====================================================================
-# 10. PITCH RENDER
+# 10. SPIELFELD RENDERER (Klassisches Grün)
 # =====================================================================
 def generate_pitch_html(state, t):
     players_json = json.dumps(state["players"])
@@ -542,7 +622,7 @@ for (let name in players) {{
 </script></body></html>"""
 
 # =====================================================================
-# 11. LAYOUT
+# 11. STREAMLIT FRONTEND-LAYOUT
 # =====================================================================
 col_left, col_right = st.columns([1, 1.25])
 
@@ -555,7 +635,7 @@ with col_left:
 
     st.title(lang["panel_title"])
 
-    # --- MATCH SETUP --------------------------------------------------
+    # --- MATCH SETUP PANEL --------------------------------------------
     with st.expander(lang["setup_hdr"], expanded=False):
         st.caption(lang["setup_cap"])
 
@@ -613,18 +693,22 @@ with col_left:
             st.success(lang["applied"])
             shared_state["info_message"] = ""
 
+    # Status- & Fehlermeldungen direkt auf dem Panel
     if shared_state.get("api_error"):
-        st.error(f"⚠️ API Error: {shared_state['api_error']}")
-        st.info("💡 Check your NVIDIA API Key in Streamlit Cloud Secrets.")
+        if "429" in shared_state["api_error"]:
+            st.warning("⏳ NVIDIA Rate Limit hit! Using cached moves to keep game running smoothly...")
+        else:
+            st.error(f"⚠️ API Error: {shared_state['api_error']}")
+            st.info("💡 Check your NVIDIA API Key in Streamlit Cloud Secrets.")
 
-    # --- START / STOP -------------------------------------------------
+    # --- START / STOP CONTROLS ----------------------------------------
     btn_type  = "primary" if shared_state["autoplay"] else "secondary"
     btn_label = lang["btn_stop"] if shared_state["autoplay"] else lang["btn_start"]
     if st.button(btn_label, use_container_width=True, type=btn_type):
         shared_state["autoplay"] = not shared_state["autoplay"]
         st.rerun()
 
-    # --- PROMPTS ------------------------------------------------------
+    # --- PROMPT TUNING AREA -------------------------------------------
     st.subheader(lang["prompt_hdr"])
     st.caption(lang["prompt_cap"])
 
@@ -659,6 +743,7 @@ with col_left:
         reset_ball()
         st.rerun()
 
+    # --- LIVE CONFIGURATION SYNC VISUALIZATION ------------------------
     with st.expander("📋 " + lang["strat_hdr"], expanded=False):
         st.json({
             name.upper(): {
@@ -679,7 +764,8 @@ with col_left:
 with col_right:
     st.title(lang["sim_title"])
     html_pitch = generate_pitch_html(shared_state, lang)
-    components.html(html_pitch, height=485, scrolling=False)
+    # Nutzt st.iframe für zukunftssichere Darstellung ohne Scrollbalken
+    st.iframe(html_pitch, height=485)
 
 # =====================================================================
 # 12. GAME LOOP
