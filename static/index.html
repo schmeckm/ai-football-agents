@@ -11,8 +11,7 @@
   * { box-sizing: border-box; }
   html, body { overflow-x: hidden; }
   body {
-    margin: 0;
-    min-height: 100vh;
+    margin: 0; min-height: 100vh;
     background:
       radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0, 230, 118, 0.08), transparent 70%),
       radial-gradient(ellipse 60% 40% at 90% 80%, rgba(0, 176, 255, 0.06), transparent 70%),
@@ -25,15 +24,11 @@
   body.shake { animation: bodyShake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
   @keyframes bodyShake {
     0%, 100% { transform: translate(0, 0); }
-    10%      { transform: translate(-9px, 5px); }
-    20%      { transform: translate(8px, -4px); }
-    30%      { transform: translate(-7px, 6px); }
-    40%      { transform: translate(6px, -5px); }
-    50%      { transform: translate(-5px, 4px); }
-    60%      { transform: translate(4px, -3px); }
-    70%      { transform: translate(-3px, 3px); }
-    80%      { transform: translate(2px, -2px); }
-    90%      { transform: translate(-1px, 1px); }
+    10% { transform: translate(-9px, 5px); } 20% { transform: translate(8px, -4px); }
+    30% { transform: translate(-7px, 6px); } 40% { transform: translate(6px, -5px); }
+    50% { transform: translate(-5px, 4px); } 60% { transform: translate(4px, -3px); }
+    70% { transform: translate(-3px, 3px); } 80% { transform: translate(2px, -2px); }
+    90% { transform: translate(-1px, 1px); }
   }
 
   h1, h2, h3 { color: #fff; font-weight: 800; letter-spacing: -0.5px; margin: 0 0 12px; }
@@ -41,10 +36,8 @@
     font-size: 24px;
     font-family: 'Orbitron', 'Inter', sans-serif;
     background: linear-gradient(135deg, #00e676 0%, #00b0ff 50%, #b388ff 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    letter-spacing: 0.5px;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; letter-spacing: 0.5px;
   }
   h2 { font-size: 16px; margin-top: 18px; }
   h3 { font-size: 14px; margin-top: 14px; color: #c0c4d0; }
@@ -52,50 +45,31 @@
   #app {
     display: grid;
     grid-template-columns: minmax(380px, 38%) 1fr;
-    gap: 18px;
-    padding: 18px;
-    max-width: 1800px;
-    margin: 0 auto;
+    gap: 18px; padding: 18px;
+    max-width: 1800px; margin: 0 auto;
   }
   .panel {
     background: linear-gradient(135deg, rgba(18, 19, 26, 0.95) 0%, rgba(14, 15, 22, 0.95) 100%);
     border: 1px solid rgba(95, 100, 130, 0.18);
-    border-radius: 14px;
-    padding: 20px;
+    border-radius: 14px; padding: 20px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.04);
     backdrop-filter: blur(8px);
   }
 
   label {
-    display: block;
-    color: #8a90a6;
-    font-size: 12px;
-    font-weight: 700;
-    margin-bottom: 5px;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
+    display: block; color: #8a90a6;
+    font-size: 12px; font-weight: 700; margin-bottom: 5px;
+    text-transform: uppercase; letter-spacing: 0.8px;
   }
   input[type="text"], select, input[type="number"], textarea {
-    width: 100%;
-    background: #1a1c23;
-    color: #fff;
-    border: 1px solid #2f3346;
-    border-radius: 8px;
-    padding: 9px 11px;
-    font-size: 13.5px;
-    font-family: inherit;
+    width: 100%; background: #1a1c23; color: #fff;
+    border: 1px solid #2f3346; border-radius: 8px;
+    padding: 9px 11px; font-size: 13.5px; font-family: inherit;
     transition: all 0.2s ease;
   }
-  textarea {
-    background: #07080b;
-    color: #e4e6eb;
-    resize: vertical;
-    min-height: 70px;
-    line-height: 1.5;
-  }
+  textarea { background: #07080b; color: #e4e6eb; resize: vertical; min-height: 70px; line-height: 1.5; }
   textarea:focus, input:focus, select:focus {
-    border-color: #00e676;
-    outline: none;
+    border-color: #00e676; outline: none;
     box-shadow: 0 0 0 3px rgba(0, 230, 118, 0.12);
   }
   input[type="color"] { width: 100%; height: 38px; background: #1a1c23; border: 1px solid #2f3346; border-radius: 8px; cursor: pointer; }
@@ -103,24 +77,22 @@
 
   button {
     background: linear-gradient(135deg, #16171e 0%, #1d1f2a 100%);
-    color: #fff;
-    border: 1px solid #3a3f58;
-    border-radius: 8px;
-    padding: 11px 18px;
-    font-weight: 800;
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    cursor: pointer;
-    width: 100%;
+    color: #fff; border: 1px solid #3a3f58;
+    border-radius: 8px; padding: 11px 18px;
+    font-weight: 800; font-size: 13px;
+    text-transform: uppercase; letter-spacing: 0.8px;
+    cursor: pointer; width: 100%;
     transition: all 0.18s cubic-bezier(.2,.9,.3,1.2);
   }
   button:hover { border-color: #00e676; color: #00e676; box-shadow: 0 0 24px rgba(0, 230, 118, 0.35); transform: translateY(-2px); }
   button:active { transform: translateY(0); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
   button.primary { background: linear-gradient(135deg, #2a0d12 0%, #3a1218 100%); color: #ff5a6c; border-color: #ff1744; box-shadow: 0 0 16px rgba(255, 23, 68, 0.25); }
   button.primary:hover { color: #ff1744; box-shadow: 0 0 28px rgba(255, 23, 68, 0.5); }
   button.apply { background: linear-gradient(135deg, #0a3a1c 0%, #0e4824 100%); color: #00e676; border-color: #00e676; box-shadow: 0 0 16px rgba(0, 230, 118, 0.25); }
   button.apply:hover { box-shadow: 0 0 28px rgba(0, 230, 118, 0.55); }
+  button.purple { background: linear-gradient(135deg, #2a1a3d 0%, #3d2358 100%); color: #b388ff; border-color: #b388ff; box-shadow: 0 0 16px rgba(179, 136, 255, 0.25); }
+  button.purple:hover { color: #b388ff; box-shadow: 0 0 28px rgba(179, 136, 255, 0.5); }
 
   .row { display: grid; gap: 10px; margin-bottom: 12px; }
   .row.cols-3 { grid-template-columns: 1.4fr 1fr 0.6fr; align-items: end; }
@@ -156,6 +128,25 @@
 
   pre.debug { background: #07080b; border: 1px solid #1a1c23; border-radius: 8px; padding: 12px; max-height: 240px; overflow: auto; font-size: 11.5px; color: #b4b8c5; margin: 0; white-space: pre-wrap; word-break: break-word; font-family: 'JetBrains Mono', 'Courier New', monospace; }
 
+  /* AI Strategy Generator */
+  .gen-box {
+    background: linear-gradient(135deg, rgba(179, 136, 255, 0.08), rgba(179, 136, 255, 0.02));
+    border: 1px solid rgba(179, 136, 255, 0.3);
+    border-radius: 10px; padding: 14px; margin-bottom: 14px;
+  }
+  .gen-box h3 { margin: 0 0 8px; color: #b388ff; text-shadow: 0 0 8px rgba(179, 136, 255, 0.4); font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+  .gen-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+
+  /* Strategy Library */
+  .strategy-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: rgba(26, 28, 35, 0.6); padding: 10px 12px; border-radius: 6px; margin-bottom: 6px; }
+  .strategy-info { flex: 1; min-width: 0; }
+  .strategy-name { font-weight: 700; font-size: 13.5px; color: #fff; margin-bottom: 2px; word-break: break-word; }
+  .strategy-meta { font-size: 11px; color: #8a90a6; }
+  .strategy-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .strategy-actions button { width: auto; padding: 6px 10px; font-size: 11px; }
+  .save-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-bottom: 10px; }
+  .save-row button { width: auto; padding: 9px 14px; }
+
   /* Leaderboard */
   .lb-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 14px; }
   .lb-table th, .lb-table td { padding: 7px 8px; text-align: left; border-bottom: 1px solid #252836; }
@@ -183,8 +174,8 @@
   #live-tag { color: #ff9100; font-weight: 800; text-shadow: 0 0 10px rgba(255, 145, 0, 0.6); animation: livePulse 1.5s ease-in-out infinite; }
   @keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
   #time-text { font-family: 'Orbitron', monospace; font-weight: 700; }
-  #btn-mute, #btn-tts { width: auto; padding: 6px 12px; font-size: 14px; background: rgba(26, 28, 35, 0.8); border: 1px solid #2f3346; text-transform: none; letter-spacing: 0; }
-  #btn-mute:hover, #btn-tts:hover { transform: none; color: #00e676; border-color: #00e676; box-shadow: 0 0 12px rgba(0, 230, 118, 0.3); }
+  #btn-mute, #btn-tts, #btn-commentary { width: auto; padding: 6px 12px; font-size: 14px; background: rgba(26, 28, 35, 0.8); border: 1px solid #2f3346; text-transform: none; letter-spacing: 0; }
+  #btn-mute:hover, #btn-tts:hover, #btn-commentary:hover { transform: none; color: #00e676; border-color: #00e676; box-shadow: 0 0 12px rgba(0, 230, 118, 0.3); }
 
   canvas { background: #235e29; border: 3px solid #fff; border-radius: 8px; width: 100%; height: auto; display: block; box-shadow: 0 0 40px rgba(0, 230, 118, 0.15), 0 8px 32px rgba(0, 0, 0, 0.5); }
 
@@ -206,12 +197,12 @@
   #goal-flash::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at center, var(--flash-color, rgba(0, 230, 118, 0.35)) 0%, transparent 65%); animation: flashRadial 1.8s ease-out forwards; }
   #goal-flash .goal-text { font-family: 'Orbitron', sans-serif; font-size: 160px; font-weight: 900; color: var(--flash-color, #00e676); text-shadow: 0 0 40px currentColor, 0 0 80px currentColor; animation: goalTextPop 1.8s cubic-bezier(.2,.8,.3,1.2) forwards; letter-spacing: 8px; }
   #goal-flash .goal-sub { position: absolute; bottom: 30%; font-family: 'Orbitron', sans-serif; font-size: 28px; font-weight: 700; color: #fff; text-shadow: 0 0 16px var(--flash-color); letter-spacing: 6px; animation: goalSubPop 1.8s ease-out forwards; }
-  @keyframes flashIn      { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
-  @keyframes flashRadial  { 0% { transform: scale(0.4); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
-  @keyframes goalTextPop  { 0% { transform: scale(0.2) rotate(-8deg); opacity: 0; } 30% { transform: scale(1.3) rotate(2deg); opacity: 1; } 70% { transform: scale(1) rotate(0); opacity: 1; } 100% { transform: scale(0.9); opacity: 0; } }
-  @keyframes goalSubPop   { 0% { transform: translateY(20px); opacity: 0; } 30% { transform: translateY(0); opacity: 1; } 70% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-10px); opacity: 0; } }
+  @keyframes flashIn { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes flashRadial { 0% { transform: scale(0.4); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
+  @keyframes goalTextPop { 0% { transform: scale(0.2) rotate(-8deg); opacity: 0; } 30% { transform: scale(1.3) rotate(2deg); opacity: 1; } 70% { transform: scale(1) rotate(0); opacity: 1; } 100% { transform: scale(0.9); opacity: 0; } }
+  @keyframes goalSubPop { 0% { transform: translateY(20px); opacity: 0; } 30% { transform: translateY(0); opacity: 1; } 70% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-10px); opacity: 0; } }
 
-  /* Full-time / Halftime overlays */
+  /* Modals */
   .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); display: none; align-items: center; justify-content: center; z-index: 9998; backdrop-filter: blur(8px); }
   .modal-overlay.show { display: flex; }
   .modal-card { background: linear-gradient(135deg, #12131a 0%, #0a0b10 100%); border-radius: 16px; padding: 40px 60px; text-align: center; max-width: 500px; }
@@ -223,12 +214,10 @@
   .modal-card button { width: auto; padding: 12px 28px; margin: 0 6px; display: inline-block; }
   .modal-hint { color: #8a90a6; font-size: 13px; max-width: 380px; margin: 16px auto; line-height: 1.5; }
 
-  /* Spectator hint */
+  /* Spectator */
   #spectator-hint { position: fixed; bottom: 20px; right: 20px; background: rgba(18, 19, 26, 0.9); border: 1px solid #2f3346; color: #8a90a6; padding: 8px 14px; border-radius: 20px; font-size: 12px; z-index: 100; animation: hintFade 8s ease-out forwards; pointer-events: none; }
   @keyframes hintFade { 0%, 80% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(10px); } }
   #spectator-hint kbd { background: #2f3346; color: #00e676; padding: 2px 7px; border-radius: 4px; font-family: monospace; font-weight: 700; margin: 0 2px; }
-
-  /* SPECTATOR MODE */
   body.spectator #app { grid-template-columns: 1fr; max-width: none; padding: 24px; }
   body.spectator > #app > .panel:first-child { display: none; }
   body.spectator #pitch-wrap { padding: 24px; }
@@ -256,7 +245,7 @@
   <div class="modal-card halftime">
     <h1>⏸️ HALF TIME</h1>
     <div class="modal-result" id="halftime-result"></div>
-    <p class="modal-hint">Coaching break! Adjust your strategies for the second half — change prompts, swap presets, deactivate players. Then resume.</p>
+    <p class="modal-hint">Coaching break! Adjust strategies for the second half — change prompts, swap presets, deactivate players. Then resume.</p>
     <button class="apply" id="ht-resume">▶️ Resume second half</button>
   </div>
 </div>
@@ -311,18 +300,47 @@
     <button id="btn_start_stop" style="margin-bottom:10px">▶️ Start match</button>
 
     <h2>Live prompt engineering</h2>
-    <div class="caption">Quick-pick a preset, or write your own. Empty = player inactive.</div>
+    <div class="caption">Quick-pick a preset, write your own, or let AI generate. Empty = inactive.</div>
 
     <div class="tabs">
       <button class="tab active" data-team="Red" id="tab_red">🇨🇭 Make Red</button>
       <button class="tab" data-team="Blue" id="tab_blue">🇩🇪 Make Blue</button>
     </div>
+
+    <!-- AI Strategy Generator -->
+    <div class="gen-box">
+      <h3>✨ AI Strategy Generator</h3>
+      <div class="caption" style="margin-bottom: 8px">Tell Llama what you want — it writes all 3 prompts for the <strong id="gen-team-label">active team</strong>.</div>
+      <div class="gen-row">
+        <input type="text" id="gen_intent" placeholder="e.g. tiki-taka possession, parking the bus, gegenpressing...">
+        <button class="purple" id="btn_generate" style="width: auto; padding: 9px 16px;">✨ Generate</button>
+      </div>
+      <div id="gen_msg"></div>
+    </div>
+
     <div id="prompts_red"></div>
     <div id="prompts_blue" style="display:none"></div>
 
     <button id="btn_reset" style="margin-top:6px">🔄 Reset ball</button>
 
     <details style="margin-top:10px">
+      <summary>💾 Strategy library (<span id="strategy-count">0</span>)</summary>
+      <div>
+        <div class="caption">Save the current team setup + all 6 prompts, then load it back with one click.</div>
+        <div class="save-row">
+          <input type="text" id="save_strategy_name" placeholder="Name this setup (e.g. 'CH-Defensive v1')">
+          <button class="apply" id="btn_save_strategy">💾 Save</button>
+        </div>
+        <div id="strategy-list"></div>
+        <div class="row" style="grid-template-columns: 1fr 1fr; margin-top: 12px;">
+          <button id="btn_export_strategies">📤 Export JSON</button>
+          <button id="btn_import_strategies">📥 Import</button>
+        </div>
+        <input type="file" id="strategy_import_file" accept=".json" style="display: none;">
+      </div>
+    </details>
+
+    <details>
       <summary>📊 Tournament leaderboard (<span id="history-count">0</span>)</summary>
       <div>
         <div id="history-table"></div>
@@ -352,7 +370,6 @@
     </div>
     <canvas id="pitch" width="800" height="500"></canvas>
 
-    <!-- AI Commentator -->
     <div id="commentary-box">
       <div id="commentary-header">
         <span>🎙️ AI Commentator</span>
@@ -383,13 +400,20 @@ const PLAYER_SPEED_SCALE = 12;
 const KICK_POWER = 420;
 const BALL_FRICTION_PER_SEC = 0.42;
 const KICK_COOLDOWN_SEC = 0.3;
-const LLM_INTERVAL_MS = 1800;       // move LLM call
-const COMMENTARY_INTERVAL_MS = 14000; // ambient commentary, only when enabled
+const LLM_INTERVAL_MS = 1800;
+const COMMENTARY_INTERVAL_MS = 14000;
 
-const HISTORY_KEY     = "make-football-history-v1";
-const MUTE_KEY        = "make-football-muted-v1";
-const COMMENTARY_KEY  = "make-football-commentary-v1";
-const TTS_KEY         = "make-football-tts-v1";
+// Replay constants
+const REPLAY_FPS = 30;                // capture frequency
+const REPLAY_DURATION_SEC = 3;        // recall last N seconds
+const REPLAY_MAX_FRAMES = REPLAY_FPS * REPLAY_DURATION_SEC;
+const REPLAY_SPEED = 0.35;            // playback speed
+
+const HISTORY_KEY       = "make-football-history-v1";
+const MUTE_KEY          = "make-football-muted-v1";
+const COMMENTARY_KEY    = "make-football-commentary-v1";
+const TTS_KEY           = "make-football-tts-v1";
+const STRATEGIES_KEY    = "make-football-strategies-v1";
 
 const NATIONS = {
   "Argentina":   { flag: "🇦🇷", color: "#75aadb" }, "Austria":     { flag: "🇦🇹", color: "#ed2939" },
@@ -435,7 +459,7 @@ const STRATEGY_PRESETS = {
   },
 };
 
-function defaultPrompts(nameRed, nameBlue) {
+function defaultPrompts() {
   return {
     red_striker:    STRATEGY_PRESETS.Striker["🔥 Aggressive"],
     red_midfielder: STRATEGY_PRESETS.Midfielder["⚡ Press"],
@@ -446,8 +470,8 @@ function defaultPrompts(nameRed, nameBlue) {
   };
 }
 
-function buildPlayers(nameRed, nameBlue) {
-  const prompts = defaultPrompts(nameRed, nameBlue);
+function buildPlayers() {
+  const prompts = defaultPrompts();
   const players = {};
   for (const [name, base] of Object.entries(INITIAL_POS)) {
     players[name] = { ...base, prompt: prompts[name], dx: 0, dy: 0, kick: false };
@@ -519,7 +543,7 @@ class AudioFX {
 const audioFX = new AudioFX();
 
 // =====================================================================
-// CONFETTI SYSTEM
+// CONFETTI
 // =====================================================================
 class ConfettiSystem {
   constructor() { this.particles = []; }
@@ -543,7 +567,7 @@ class ConfettiSystem {
     for (const p of this.particles) {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vy += 450 * dt;     // gravity
+      p.vy += 450 * dt;
       p.vx *= Math.pow(0.6, dt);
       p.rot += p.spin * dt;
       p.life -= dt;
@@ -566,6 +590,40 @@ class ConfettiSystem {
 const confetti = new ConfettiSystem();
 
 // =====================================================================
+// REPLAY BUFFER — captures recent frames for slow-mo
+// =====================================================================
+class ReplayBuffer {
+  constructor() {
+    this.frames = [];
+    this.lastCapture = 0;
+    this.interval = 1 / REPLAY_FPS;
+  }
+  capture(dt) {
+    this.lastCapture += dt;
+    if (this.lastCapture < this.interval) return;
+    this.lastCapture = 0;
+    const snapshot = {
+      ball: { x: state.ball.x, y: state.ball.y },
+      players: {},
+      ballTrail: state.ballTrail.map(t => ({ x: t.x, y: t.y })),
+    };
+    for (const [name, p] of Object.entries(state.players)) {
+      snapshot.players[name] = { x: p.x, y: p.y, active: isActive(p), team: p.team, role: p.role };
+    }
+    this.frames.push(snapshot);
+    if (this.frames.length > REPLAY_MAX_FRAMES) this.frames.shift();
+  }
+  takeSnapshot() {
+    return this.frames.slice();   // shallow copy of frame array
+  }
+  clear() {
+    this.frames = [];
+    this.lastCapture = 0;
+  }
+}
+const replayBuffer = new ReplayBuffer();
+
+// =====================================================================
 // STATE
 // =====================================================================
 const state = {
@@ -578,7 +636,7 @@ const state = {
   ballTrail: [],
   teamRed:  { name: "Make Red",  nation: "Switzerland", color: "#ff1744" },
   teamBlue: { name: "Make Blue", nation: "Germany",     color: "#00b0ff" },
-  players: buildPlayers("Make Red", "Make Blue"),
+  players: buildPlayers(),
   lastLLMCall: 0,
   pendingLLM: false,
   lastLLMDebug: "{}",
@@ -591,6 +649,9 @@ const state = {
   ttsEnabled: localStorage.getItem(TTS_KEY) === "1",
   lastCommentaryCall: 0,
   pendingCommentary: false,
+  // Replay
+  replay: { active: false, frames: [], currentFrame: 0, team: "Red" },
+  pendingResetAfterReplay: false,
 };
 
 // =====================================================================
@@ -637,14 +698,17 @@ function applySetup() {
   state.ball = { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 };
   state.ballKickCooldown = 0;
   state.ballTrail = [];
-  state.players = buildPlayers(nameRed, nameBlue);
+  state.players = buildPlayers();
   state.lastLLMDebug = "{}";
   state.apiError = null;
   state.matchRecorded = false;
   state.halftimeShown = false;
   state.commentaries = [];
+  state.replay.active = false;
+  replayBuffer.clear();
 
   renderTabs(); renderPrompts(); renderScore(); renderStartStop(); renderApiError(); renderCommentaries();
+  renderGenTeamLabel();
   document.getElementById("setup_msg").innerHTML = '<div class="success">Match setup applied. Press Start to kickoff.</div>';
   setTimeout(() => { document.getElementById("setup_msg").innerHTML = ""; }, 3500);
 }
@@ -652,9 +716,7 @@ function applySetup() {
 // =====================================================================
 // MATCH HISTORY
 // =====================================================================
-function loadHistory() {
-  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; }
-}
+function loadHistory() { try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; } }
 function saveHistory(h) { localStorage.setItem(HISTORY_KEY, JSON.stringify(h)); }
 
 function recordMatch() {
@@ -700,7 +762,6 @@ function renderHistory() {
     if (b.points !== a.points) return b.points - a.points;
     return (b.gf - b.ga) - (a.gf - a.ga);
   });
-
   let html = '<table class="lb-table"><thead><tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>Pts</th></tr></thead><tbody>';
   sorted.forEach((s, i) => {
     const flag = NATIONS[s.nation]?.flag || "";
@@ -718,6 +779,134 @@ function renderHistory() {
 }
 
 // =====================================================================
+// STRATEGY LIBRARY
+// =====================================================================
+function loadStrategies() { try { return JSON.parse(localStorage.getItem(STRATEGIES_KEY) || "{}"); } catch { return {}; } }
+function saveStrategiesAll(s) { localStorage.setItem(STRATEGIES_KEY, JSON.stringify(s)); }
+
+function saveCurrentStrategy(name) {
+  name = name.trim();
+  if (!name) { alert("Give your strategy a name first."); return; }
+  const all = loadStrategies();
+  if (all[name] && !confirm(`Overwrite existing strategy "${name}"?`)) return;
+  all[name] = {
+    saved: new Date().toISOString(),
+    teamRed: { ...state.teamRed },
+    teamBlue: { ...state.teamBlue },
+    matchDuration: state.matchDuration,
+    prompts: Object.fromEntries(
+      Object.entries(state.players).map(([n, p]) => [n, p.prompt])
+    ),
+  };
+  saveStrategiesAll(all);
+  renderStrategyLibrary();
+  document.getElementById("save_strategy_name").value = "";
+}
+
+function loadStrategyByName(name) {
+  const all = loadStrategies();
+  const s = all[name];
+  if (!s) return;
+  state.teamRed = { ...s.teamRed };
+  state.teamBlue = { ...s.teamBlue };
+  state.matchDuration = s.matchDuration;
+  state.timeLeft = s.matchDuration;
+  state.score = { Red: 0, Blue: 0 };
+  state.autoplay = false;
+  state.ball = { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 };
+  state.ballTrail = [];
+  state.players = buildPlayers();
+  for (const [pName, prompt] of Object.entries(s.prompts || {})) {
+    if (state.players[pName]) state.players[pName].prompt = prompt;
+  }
+  state.matchRecorded = false;
+  state.halftimeShown = false;
+  state.commentaries = [];
+  state.replay.active = false;
+  replayBuffer.clear();
+
+  loadSetupFromState();
+  renderTabs(); renderPrompts(); renderScore(); renderStartStop(); renderCommentaries(); renderGenTeamLabel();
+  document.getElementById("setup_msg").innerHTML = `<div class="success">Loaded strategy "${escapeHTML(name)}".</div>`;
+  setTimeout(() => { document.getElementById("setup_msg").innerHTML = ""; }, 3000);
+}
+
+function deleteStrategyByName(name) {
+  const all = loadStrategies();
+  delete all[name];
+  saveStrategiesAll(all);
+  renderStrategyLibrary();
+}
+
+function exportStrategies() {
+  const all = loadStrategies();
+  if (Object.keys(all).length === 0) { alert("No strategies to export yet."); return; }
+  const blob = new Blob([JSON.stringify(all, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `make-football-strategies-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importStrategies(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (typeof data !== "object" || data === null) throw new Error("Invalid file format");
+      const all = loadStrategies();
+      let imported = 0;
+      for (const [name, s] of Object.entries(data)) {
+        if (s && s.prompts && s.teamRed && s.teamBlue) {
+          all[name] = s; imported++;
+        }
+      }
+      saveStrategiesAll(all);
+      renderStrategyLibrary();
+      alert(`Imported ${imported} strategies.`);
+    } catch (err) { alert(`Import failed: ${err.message}`); }
+  };
+  reader.readAsText(file);
+}
+
+function renderStrategyLibrary() {
+  const all = loadStrategies();
+  const names = Object.keys(all).sort();
+  document.getElementById("strategy-count").textContent = names.length;
+  const list = document.getElementById("strategy-list");
+  if (names.length === 0) {
+    list.innerHTML = '<div class="caption">No saved strategies yet. Configure your teams above, name your setup, then click Save.</div>';
+    return;
+  }
+  list.innerHTML = names.map(name => {
+    const s = all[name];
+    const rf = NATIONS[s.teamRed.nation]?.flag || "🔴";
+    const bf = NATIONS[s.teamBlue.nation]?.flag || "🔵";
+    const date = s.saved ? new Date(s.saved).toLocaleDateString() : "";
+    return `<div class="strategy-row">
+      <div class="strategy-info">
+        <div class="strategy-name">${escapeHTML(name)}</div>
+        <div class="strategy-meta">${rf} ${escapeHTML(s.teamRed.name)} vs ${escapeHTML(s.teamBlue.name)} ${bf} · ${s.matchDuration}s · ${date}</div>
+      </div>
+      <div class="strategy-actions">
+        <button class="apply" data-action="load" data-name="${escapeHTML(name)}">Load</button>
+        <button data-action="delete" data-name="${escapeHTML(name)}">🗑️</button>
+      </div>
+    </div>`;
+  }).join("");
+  list.querySelectorAll("button[data-action='load']").forEach(btn => {
+    btn.addEventListener("click", () => loadStrategyByName(btn.dataset.name));
+  });
+  list.querySelectorAll("button[data-action='delete']").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (confirm(`Delete strategy "${btn.dataset.name}"?`)) deleteStrategyByName(btn.dataset.name);
+    });
+  });
+}
+
+// =====================================================================
 // PROMPT EDITORS
 // =====================================================================
 function renderTabs() {
@@ -725,6 +914,11 @@ function renderTabs() {
   const bf = NATIONS[state.teamBlue.nation]?.flag || "🔵";
   document.getElementById("tab_red").textContent  = `${rf} ${state.teamRed.name}`;
   document.getElementById("tab_blue").textContent = `${bf} ${state.teamBlue.name}`;
+}
+
+function renderGenTeamLabel() {
+  const name = state.activeTab === "Red" ? state.teamRed.name : state.teamBlue.name;
+  document.getElementById("gen-team-label").textContent = name;
 }
 
 function isActive(player) { return player.prompt && player.prompt.trim().length > 0; }
@@ -798,7 +992,54 @@ function updateStrategiesView() {
 }
 
 // =====================================================================
-// COMMENTARY (opt-in)
+// AI STRATEGY GENERATOR
+// =====================================================================
+async function generateStrategy() {
+  const intentInput = document.getElementById("gen_intent");
+  const intent = intentInput.value.trim();
+  if (!intent) { document.getElementById("gen_msg").innerHTML = '<div class="error">Type a tactical intent first.</div>'; return; }
+
+  const team = state.activeTab;
+  const teamName = team === "Red" ? state.teamRed.name : state.teamBlue.name;
+  const btn = document.getElementById("btn_generate");
+  const msg = document.getElementById("gen_msg");
+
+  btn.disabled = true;
+  const orig = btn.textContent;
+  btn.textContent = "⏳ Generating...";
+  msg.innerHTML = "";
+
+  try {
+    const r = await fetch("/api/generate_strategy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ intent, team_name: teamName }),
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+
+    if (!data.striker && !data.midfielder && !data.defender) {
+      throw new Error(data.debug || "Empty response from LLM");
+    }
+
+    const prefix = team === "Red" ? "red_" : "blue_";
+    if (data.striker)    state.players[prefix + "striker"].prompt    = data.striker;
+    if (data.midfielder) state.players[prefix + "midfielder"].prompt = data.midfielder;
+    if (data.defender)   state.players[prefix + "defender"].prompt   = data.defender;
+    renderPrompts();
+    msg.innerHTML = `<div class="success" style="margin-top: 8px;">✨ Generated 3 prompts for ${escapeHTML(teamName)}.</div>`;
+    setTimeout(() => { msg.innerHTML = ""; }, 4000);
+    intentInput.value = "";
+  } catch (e) {
+    msg.innerHTML = `<div class="error" style="margin-top: 8px;">Generation failed: ${escapeHTML(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+}
+
+// =====================================================================
+// COMMENTARY
 // =====================================================================
 async function fetchCommentary(event, extra = "") {
   if (!state.commentaryEnabled) return;
@@ -806,16 +1047,10 @@ async function fetchCommentary(event, extra = "") {
   state.pendingCommentary = true;
   try {
     const r = await fetch("/api/commentary", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        event,
-        team_red_name: state.teamRed.name,
-        team_blue_name: state.teamBlue.name,
-        score_red: state.score.Red,
-        score_blue: state.score.Blue,
-        time_left: state.timeLeft,
-        extra,
+        event, team_red_name: state.teamRed.name, team_blue_name: state.teamBlue.name,
+        score_red: state.score.Red, score_blue: state.score.Blue, time_left: state.timeLeft, extra,
       }),
     });
     if (!r.ok) return;
@@ -832,21 +1067,14 @@ function pushCommentary(text) {
   if (state.ttsEnabled && "speechSynthesis" in window) {
     const u = new SpeechSynthesisUtterance(text);
     u.rate = 1.15; u.pitch = 1.05; u.volume = 0.9;
-    speechSynthesis.cancel();
-    speechSynthesis.speak(u);
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
   }
 }
 
 function renderCommentaries() {
   const list = document.getElementById("commentary-list");
-  if (!state.commentaryEnabled) {
-    list.innerHTML = '<div class="commentary-empty">Enable AI Commentator to hear live match commentary.</div>';
-    return;
-  }
-  if (state.commentaries.length === 0) {
-    list.innerHTML = '<div class="commentary-empty">Commentary will appear when the match starts...</div>';
-    return;
-  }
+  if (!state.commentaryEnabled) { list.innerHTML = '<div class="commentary-empty">Enable AI Commentator to hear live match commentary.</div>'; return; }
+  if (state.commentaries.length === 0) { list.innerHTML = '<div class="commentary-empty">Commentary will appear when the match starts...</div>'; return; }
   list.innerHTML = state.commentaries.slice(0, 6).map(c =>
     `<div class="commentary-item"><span class="commentary-time">${c.time.toFixed(0)}s</span>${escapeHTML(c.text)}</div>`
   ).join("");
@@ -891,11 +1119,8 @@ async function fetchMoves() {
       else { p.dx = clampDelta(mv.x); p.dy = clampDelta(mv.y); p.kick = !!mv.k; }
     }
     document.getElementById("debug_view").textContent = state.lastLLMDebug;
-  } catch (e) {
-    state.apiError = e.message; renderApiError();
-  } finally {
-    state.pendingLLM = false;
-  }
+  } catch (e) { state.apiError = e.message; renderApiError(); }
+  finally { state.pendingLLM = false; }
 }
 
 // =====================================================================
@@ -906,6 +1131,26 @@ function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 function resetBall() {
   state.ball = { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 };
   state.ballKickCooldown = 0; state.ballTrail = [];
+}
+
+function startReplay(team) {
+  // Snapshot the buffer and switch to replay mode
+  const frames = replayBuffer.takeSnapshot();
+  if (frames.length < 5) return false;   // not enough to be useful
+  state.replay = { active: true, frames, currentFrame: 0, team };
+  state.pendingResetAfterReplay = true;
+  replayBuffer.clear();
+  return true;
+}
+
+function endReplay() {
+  state.replay.active = false;
+  state.replay.frames = [];
+  state.replay.currentFrame = 0;
+  if (state.pendingResetAfterReplay) {
+    resetBall();
+    state.pendingResetAfterReplay = false;
+  }
 }
 
 function triggerGoalFlash(team) {
@@ -920,15 +1165,9 @@ function triggerGoalFlash(team) {
   const scoreEl = document.getElementById("score-text");
   scoreEl.classList.remove("bump"); void scoreEl.offsetWidth; scoreEl.classList.add("bump");
   audioFX.goal();
-
-  // Confetti from ball position
   confetti.burst(state.ball.x, state.ball.y, color, "#ffd700");
-
-  // Screen shake
   document.body.classList.remove("shake"); void document.body.offsetWidth; document.body.classList.add("shake");
   setTimeout(() => document.body.classList.remove("shake"), 600);
-
-  // AI commentary
   fetchCommentary(team === "Red" ? "goal_red" : "goal_blue");
 }
 
@@ -950,7 +1189,6 @@ function physicsStep(dt) {
         if (speed > 0) { mdx = (bDx / bDist) * speed; mdy = (bDy / bDist) * speed; }
       }
     }
-
     p.x = clamp(p.x + mdx * dt * PLAYER_SPEED_SCALE, 20, FIELD_W - 20);
     p.y = clamp(p.y + mdy * dt * PLAYER_SPEED_SCALE, 20, FIELD_H - 20);
 
@@ -980,15 +1218,20 @@ function physicsStep(dt) {
   if (state.ballTrail.length > 16) state.ballTrail.shift();
 
   if (state.ball.x > FIELD_W - 20 && state.ball.y > GOAL_MIN && state.ball.y < GOAL_MAX) {
-    state.score.Red += 1; triggerGoalFlash("Red"); resetBall();
+    state.score.Red += 1;
+    triggerGoalFlash("Red");
+    if (!startReplay("Red")) resetBall();
   } else if (state.ball.x < 20 && state.ball.y > GOAL_MIN && state.ball.y < GOAL_MAX) {
-    state.score.Blue += 1; triggerGoalFlash("Blue"); resetBall();
+    state.score.Blue += 1;
+    triggerGoalFlash("Blue");
+    if (!startReplay("Blue")) resetBall();
   } else {
     if (state.ball.x < 8 || state.ball.x > FIELD_W - 8) { state.ball.vx *= -0.5; state.ball.x = clamp(state.ball.x, 8, FIELD_W - 8); }
     if (state.ball.y < 8 || state.ball.y > FIELD_H - 8) { state.ball.vy *= -0.5; state.ball.y = clamp(state.ball.y, 8, FIELD_H - 8); }
   }
 
-  confetti.update(dt);
+  // Capture for replay
+  replayBuffer.capture(dt);
 }
 
 // =====================================================================
@@ -1016,40 +1259,79 @@ function renderPitch() {
   ctx.font = "bold 30px 'Orbitron', 'Impact', sans-serif"; ctx.textAlign = "center";
   ctx.fillText("MAKE FOOTBALL TEAM", FIELD_W/2, FIELD_H/2 + 10);
 
-  for (let i = 0; i < state.ballTrail.length; i++) {
-    const alpha = (i + 1) / state.ballTrail.length * 0.6;
-    ctx.beginPath(); ctx.arc(state.ballTrail[i].x, state.ballTrail[i].y, 3 + i * 0.4, 0, Math.PI * 2);
+  // Determine source: replay or live
+  let ballX, ballY, ballTrail, getPlayer;
+  if (state.replay.active && state.replay.frames.length > 0) {
+    const idx = Math.min(Math.floor(state.replay.currentFrame), state.replay.frames.length - 1);
+    const frame = state.replay.frames[idx];
+    ballX = frame.ball.x; ballY = frame.ball.y;
+    ballTrail = frame.ballTrail;
+    getPlayer = (name) => {
+      const f = frame.players[name];
+      if (!f) return null;
+      return { x: f.x, y: f.y, active: f.active, team: f.team };
+    };
+  } else {
+    ballX = state.ball.x; ballY = state.ball.y;
+    ballTrail = state.ballTrail;
+    getPlayer = (name) => {
+      const p = state.players[name];
+      return { x: p.x, y: p.y, active: isActive(p), team: p.team };
+    };
+  }
+
+  // Ball trail
+  for (let i = 0; i < ballTrail.length; i++) {
+    const alpha = (i + 1) / ballTrail.length * 0.6;
+    ctx.beginPath(); ctx.arc(ballTrail[i].x, ballTrail[i].y, 3 + i * 0.4, 0, Math.PI * 2);
     ctx.fillStyle = `rgba(255,255,255,${alpha})`; ctx.fill();
   }
 
-  ctx.beginPath(); ctx.arc(state.ball.x, state.ball.y, BALL_RADIUS, 0, Math.PI * 2);
+  // Ball
+  ctx.beginPath(); ctx.arc(ballX, ballY, BALL_RADIUS, 0, Math.PI * 2);
   ctx.fillStyle = "#fff"; ctx.fill();
   ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.stroke();
 
-  for (const [name, p] of Object.entries(state.players)) {
-    const baseColor = p.team === "Red" ? state.teamRed.color : state.teamBlue.color;
-    const active = isActive(p);
-    if (active) {
+  // Players
+  for (const name of Object.keys(state.players)) {
+    const pInfo = getPlayer(name);
+    if (!pInfo) continue;
+    const baseColor = pInfo.team === "Red" ? state.teamRed.color : state.teamBlue.color;
+    if (pInfo.active) {
       ctx.globalAlpha = 0.25; ctx.fillStyle = baseColor;
-      ctx.beginPath(); ctx.arc(p.x, p.y, PLAYER_RADIUS + 5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(pInfo.x, pInfo.y, PLAYER_RADIUS + 5, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1; ctx.fillStyle = baseColor;
-      ctx.beginPath(); ctx.arc(p.x, p.y, PLAYER_RADIUS, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(pInfo.x, pInfo.y, PLAYER_RADIUS, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.8; ctx.setLineDash([]); ctx.stroke();
       ctx.fillStyle = "rgba(255,255,255,0.95)";
     } else {
       ctx.globalAlpha = 0.32; ctx.fillStyle = baseColor;
-      ctx.beginPath(); ctx.arc(p.x, p.y, PLAYER_RADIUS, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(pInfo.x, pInfo.y, PLAYER_RADIUS, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]); ctx.stroke();
       ctx.setLineDash([]); ctx.globalAlpha = 1; ctx.fillStyle = "rgba(255,255,255,0.55)";
     }
     ctx.font = "bold 10px 'Inter', sans-serif"; ctx.textAlign = "center";
     const role = name.split("_")[1].slice(0, 3).toUpperCase();
-    ctx.fillText(role, p.x, p.y + 3);
+    ctx.fillText(role, pInfo.x, pInfo.y + 3);
   }
 
-  // Confetti on top
   ctx.globalAlpha = 1;
   confetti.render(ctx);
+
+  // SLOW-MO banner overlay
+  if (state.replay.active) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
+    ctx.fillRect(0, 0, FIELD_W, 56);
+    ctx.fillStyle = "#ff9100";
+    ctx.font = "bold 26px 'Orbitron', sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("🎬 SLOW-MO REPLAY", FIELD_W/2, 38);
+    // progress bar
+    const progress = state.replay.currentFrame / state.replay.frames.length;
+    ctx.fillStyle = "rgba(255, 145, 0, 0.25)";
+    ctx.fillRect(0, 54, FIELD_W, 2);
+    ctx.fillStyle = "#ff9100";
+    ctx.fillRect(0, 54, FIELD_W * Math.min(1, progress), 2);
+  }
 }
 
 function renderScore() {
@@ -1065,18 +1347,13 @@ function renderStartStop() {
   if (state.autoplay) { btn.textContent = "⏹️ Stop match"; btn.classList.add("primary"); }
   else { btn.textContent = "▶️ Start match"; btn.classList.remove("primary"); }
 }
-
 function renderApiError() {
-  const box = document.getElementById("api_error_box");
-  box.innerHTML = state.apiError ? `<div class="error">⚠️ API error: ${state.apiError}</div>` : "";
+  document.getElementById("api_error_box").innerHTML = state.apiError ? `<div class="error">⚠️ API error: ${state.apiError}</div>` : "";
 }
-
-function renderMuteButton() {
-  document.getElementById("btn-mute").textContent = audioFX.muted ? "🔇" : "🔊";
-}
+function renderMuteButton() { document.getElementById("btn-mute").textContent = audioFX.muted ? "🔇" : "🔊"; }
 
 // =====================================================================
-// HALFTIME / FULLTIME OVERLAYS
+// MODALS
 // =====================================================================
 function showHalftime() {
   const ov = document.getElementById("halftime-overlay");
@@ -1117,11 +1394,18 @@ function loop(now) {
   const dt = Math.min((now - lastFrame) / 1000, 1/30);
   lastFrame = now;
 
-  if (state.autoplay && state.timeLeft > 0) {
+  // Replay playback (pauses physics + timer)
+  if (state.replay.active) {
+    state.replay.currentFrame += dt * REPLAY_FPS * REPLAY_SPEED;
+    if (state.replay.currentFrame >= state.replay.frames.length) {
+      endReplay();
+    }
+    confetti.update(dt);
+  }
+  else if (state.autoplay && state.timeLeft > 0) {
     physicsStep(dt);
     state.timeLeft = Math.max(0, state.timeLeft - dt);
 
-    // Halftime trigger
     if (!state.halftimeShown && state.timeLeft <= state.matchDuration / 2) {
       state.halftimeShown = true;
       state.autoplay = false;
@@ -1130,7 +1414,6 @@ function loop(now) {
       fetchCommentary("halftime");
       setTimeout(showHalftime, 500);
     }
-    // Fulltime
     else if (state.timeLeft <= 0) {
       state.autoplay = false;
       renderStartStop();
@@ -1140,20 +1423,17 @@ function loop(now) {
       setTimeout(showFullTime, 800);
     }
   } else {
-    // Even when paused, keep confetti animating
     confetti.update(dt);
   }
 
   renderPitch();
   renderScore();
 
-  // LLM move call
-  if (state.autoplay && state.timeLeft > 0 && now - state.lastLLMCall > LLM_INTERVAL_MS) {
+  if (!state.replay.active && state.autoplay && state.timeLeft > 0 && now - state.lastLLMCall > LLM_INTERVAL_MS) {
     state.lastLLMCall = now;
     fetchMoves();
   }
-  // Ambient commentary
-  if (state.autoplay && state.commentaryEnabled && state.timeLeft > 0 &&
+  if (!state.replay.active && state.autoplay && state.commentaryEnabled && state.timeLeft > 0 &&
       now - state.lastCommentaryCall > COMMENTARY_INTERVAL_MS) {
     state.lastCommentaryCall = now;
     fetchCommentary("ambient");
@@ -1181,6 +1461,7 @@ document.getElementById("btn_start_stop").addEventListener("click", () => {
     state.halftimeShown = false;
     state.commentaries = [];
     state.ball = { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 };
+    replayBuffer.clear();
     renderCommentaries();
   }
   state.autoplay = !state.autoplay;
@@ -1217,6 +1498,7 @@ document.getElementById("ft-new").addEventListener("click", () => {
   state.matchRecorded = false; state.halftimeShown = false; state.commentaries = [];
   state.ball = { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 };
   state.autoplay = true;
+  replayBuffer.clear();
   audioFX.whistle();
   fetchCommentary("kickoff");
   renderCommentaries(); renderStartStop();
@@ -1230,6 +1512,28 @@ document.getElementById("ht-resume").addEventListener("click", () => {
   renderStartStop();
 });
 
+// Strategy library events
+document.getElementById("btn_save_strategy").addEventListener("click", () => {
+  saveCurrentStrategy(document.getElementById("save_strategy_name").value);
+});
+document.getElementById("save_strategy_name").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); document.getElementById("btn_save_strategy").click(); }
+});
+document.getElementById("btn_export_strategies").addEventListener("click", exportStrategies);
+document.getElementById("btn_import_strategies").addEventListener("click", () => {
+  document.getElementById("strategy_import_file").click();
+});
+document.getElementById("strategy_import_file").addEventListener("change", (e) => {
+  if (e.target.files[0]) importStrategies(e.target.files[0]);
+  e.target.value = "";
+});
+
+// AI Strategy Generator events
+document.getElementById("btn_generate").addEventListener("click", generateStrategy);
+document.getElementById("gen_intent").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); generateStrategy(); }
+});
+
 document.querySelectorAll(".tab").forEach(t => {
   t.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
@@ -1237,10 +1541,10 @@ document.querySelectorAll(".tab").forEach(t => {
     state.activeTab = t.dataset.team;
     document.getElementById("prompts_red").style.display  = state.activeTab === "Red"  ? "" : "none";
     document.getElementById("prompts_blue").style.display = state.activeTab === "Blue" ? "" : "none";
+    renderGenTeamLabel();
   });
 });
 
-// Keyboard shortcuts
 document.addEventListener("keydown", (e) => {
   const tag = (e.target.tagName || "").toLowerCase();
   if (tag === "input" || tag === "textarea" || tag === "select") return;
@@ -1261,7 +1565,9 @@ renderScore();
 renderStartStop();
 renderMuteButton();
 renderHistory();
+renderStrategyLibrary();
 renderCommentaryButton();
+renderGenTeamLabel();
 requestAnimationFrame(loop);
 </script>
 </body>

@@ -1,8 +1,9 @@
 """
 MAKE Football Team - FastAPI Backend
 Endpoints:
-  POST /api/move        -> game move decisions
-  POST /api/commentary  -> live match commentary
+  POST /api/move               -> game move decisions
+  POST /api/commentary         -> live match commentary
+  POST /api/generate_strategy  -> generate 3 position prompts from a free-text intent
 """
 import os
 import re
@@ -35,6 +36,15 @@ app.add_middleware(
 
 def log(msg: str):
     print(msg, file=sys.stderr, flush=True)
+
+
+def extract_json(raw: str) -> Dict:
+    cleaned = re.sub(r"```(?:json)?\s*", "", raw)
+    cleaned = re.sub(r"```", "", cleaned)
+    m = re.search(r"\{.*\}", cleaned, re.DOTALL)
+    if not m:
+        raise ValueError("no JSON object found")
+    return json.loads(m.group(0))
 
 
 # =====================================================================
@@ -76,15 +86,6 @@ def clamp_move(mv: Dict) -> Dict:
         "y": max(-5.0, min(5.0, y)),
         "k": bool(mv.get("k", False)),
     }
-
-
-def extract_json(raw: str) -> Dict:
-    cleaned = re.sub(r"```(?:json)?\s*", "", raw)
-    cleaned = re.sub(r"```", "", cleaned)
-    m = re.search(r"\{.*\}", cleaned, re.DOTALL)
-    if not m:
-        raise ValueError("no JSON object found")
-    return json.loads(m.group(0))
 
 
 @app.post("/api/move", response_model=MoveResponse)
@@ -189,16 +190,6 @@ class CommentaryResponse(BaseModel):
     debug: str = ""
 
 
-CANNED_COMMENTARY = {
-    "kickoff":     "And the match is underway!",
-    "goal_red":    "GOAL! What a finish!",
-    "goal_blue":   "GOAL! Stunning play!",
-    "halftime":    "The halftime whistle blows.",
-    "fulltime":    "And that is full time!",
-    "ambient":     "End-to-end stuff here.",
-}
-
-
 @app.post("/api/commentary", response_model=CommentaryResponse)
 async def get_commentary(req: CommentaryRequest):
     event_desc = {
@@ -252,14 +243,88 @@ async def get_commentary(req: CommentaryRequest):
 
     except Exception as e:
         log(f"[commentary] ERROR: {e}")
-        fallback = CANNED_COMMENTARY.get(req.event, "The match continues...")
-        if req.event == "goal_red":
-            fallback = f"GOAL for {req.team_red_name}!"
-        elif req.event == "goal_blue":
-            fallback = f"GOAL for {req.team_blue_name}!"
-        elif req.event == "halftime":
-            fallback = f"Halftime. {req.team_red_name} {req.score_red}, {req.team_blue_name} {req.score_blue}."
-        return CommentaryResponse(text=fallback, debug=f"fallback: {e}")
+        canned = {
+            "kickoff":   "And we are underway!",
+            "goal_red":  f"GOAL for {req.team_red_name}!",
+            "goal_blue": f"GOAL for {req.team_blue_name}!",
+            "halftime":  f"Halftime. {req.team_red_name} {req.score_red}, {req.team_blue_name} {req.score_blue}.",
+            "fulltime":  "And that is full time!",
+            "ambient":   "The match continues...",
+        }
+        return CommentaryResponse(text=canned.get(req.event, "The match continues..."), debug=f"fallback: {e}")
+
+
+# =====================================================================
+# /api/generate_strategy
+# =====================================================================
+class StrategyGenRequest(BaseModel):
+    intent: str
+    team_name: str = "the team"
+
+
+class StrategyGenResponse(BaseModel):
+    striker: str = ""
+    midfielder: str = ""
+    defender: str = ""
+    debug: str = ""
+
+
+@app.post("/api/generate_strategy", response_model=StrategyGenResponse)
+async def generate_strategy(req: StrategyGenRequest):
+    intent = req.intent.strip()
+    if not intent:
+        return StrategyGenResponse(debug="empty intent")
+
+    system = (
+        "You are a football tactics coach writing instructions for AI-controlled players. "
+        "Given a team name and a tactical intent, write THREE separate prompts — one each for "
+        "the STRIKER, the MIDFIELDER, and the DEFENDER. Each prompt must:\n"
+        "  - be 2 to 4 sentences\n"
+        "  - describe concrete movement rules and decision triggers\n"
+        "  - reflect the tactical intent\n"
+        "  - be written in English, plain prose, no markdown\n\n"
+        "Respond with VALID JSON ONLY, exactly this shape, nothing else:\n"
+        '{"striker":"...","midfielder":"...","defender":"..."}'
+    )
+    user = f"Team: {req.team_name}. Tactical intent: {intent}\n\nWrite the three prompts now."
+
+    raw = ""
+    try:
+        async with httpx.AsyncClient(timeout=12.0) as client:
+            r = await client.post(
+                NVIDIA_URL,
+                headers={
+                    "Authorization": f"Bearer {NVIDIA_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": MODEL_ID,
+                    "messages": [
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": user},
+                    ],
+                    "temperature": 0.7,
+                    "max_tokens": 500,
+                },
+            )
+            r.raise_for_status()
+            data = r.json()
+            raw = data["choices"][0]["message"]["content"].strip()
+            parsed = extract_json(raw)
+
+            striker    = str(parsed.get("striker", "")).strip()
+            midfielder = str(parsed.get("midfielder", "")).strip()
+            defender   = str(parsed.get("defender", "")).strip()
+
+            log(f"[gen_strategy] intent={intent[:60]!r} ok")
+            return StrategyGenResponse(
+                striker=striker, midfielder=midfielder, defender=defender,
+                debug=raw[:400],
+            )
+    except Exception as e:
+        err = f"{type(e).__name__}: {str(e)[:160]}"
+        log(f"[gen_strategy] ERROR: {err} | raw={raw[:200]}")
+        return StrategyGenResponse(debug=f"ERROR: {err}")
 
 
 # =====================================================================
