@@ -10,8 +10,9 @@ from openai import OpenAI  # Synchroner Client für maximale Stabilität!
 NVIDIA_API_KEY = st.secrets["NVIDIA_API_KEY"]
 
 # Synchroner Client verhindert jegliche Streamlit-Event-Loop-Konflikte
+# Bereinigte URLs ohne störende Markdown-Link-Formatierungen!
 ai_client = OpenAI(
-    base_url="[https://integrate.api.google.com/v1](https://integrate.api.google.com/v1)" if not NVIDIA_API_KEY else "[https://integrate.api.nvidia.com/v1](https://integrate.api.nvidia.com/v1)",
+    base_url="https://integrate.api.nvidia.com/v1",
     api_key=NVIDIA_API_KEY
 )
 
