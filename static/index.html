@@ -589,8 +589,32 @@ function physicsStep(dt) {
 
   for (const p of Object.values(state.players)) {
     if (!isActive(p)) continue;
-    p.x = clamp(p.x + p.dx * dt * PLAYER_SPEED_SCALE, 20, FIELD_W - 20);
-    p.y = clamp(p.y + p.dy * dt * PLAYER_SPEED_SCALE, 20, FIELD_H - 20);
+
+    // Fallback AI: if LLM returned 0,0 for an active player, drift toward ball
+    // based on role. Keeps the game lively even when Llama "freezes".
+    let mdx = p.dx;
+    let mdy = p.dy;
+    if (mdx === 0 && mdy === 0) {
+      const bDx = state.ball.x - p.x;
+      const bDy = state.ball.y - p.y;
+      const bDist = Math.hypot(bDx, bDy);
+      if (bDist > 1) {
+        const ownHalf = (p.team === "Red"  && state.ball.x < FIELD_W / 2) ||
+                          (p.team === "Blue" && state.ball.x > FIELD_W / 2);
+        let speed = 0;
+        if      (p.role === "Striker")             speed = 4;
+        else if (p.role === "Midfielder")          speed = 3;
+        else if (p.role === "Defender" && ownHalf) speed = 3;
+        // Defender out of own half: stays put
+        if (speed > 0) {
+          mdx = (bDx / bDist) * speed;
+          mdy = (bDy / bDist) * speed;
+        }
+      }
+    }
+
+    p.x = clamp(p.x + mdx * dt * PLAYER_SPEED_SCALE, 20, FIELD_W - 20);
+    p.y = clamp(p.y + mdy * dt * PLAYER_SPEED_SCALE, 20, FIELD_H - 20);
 
     const ddx = p.x - state.ball.x;
     const ddy = p.y - state.ball.y;
