@@ -11,7 +11,7 @@ NVIDIA_API_KEY = st.secrets["NVIDIA_API_KEY"]
 
 # Synchroner Client verhindert jegliche Streamlit-Event-Loop-Konflikte
 ai_client = OpenAI(
-    base_url="https://integrate.api.google.com/v1" if not NVIDIA_API_KEY else "https://integrate.api.nvidia.com/v1",
+    base_url="[https://integrate.api.google.com/v1](https://integrate.api.google.com/v1)" if not NVIDIA_API_KEY else "[https://integrate.api.nvidia.com/v1](https://integrate.api.nvidia.com/v1)",
     api_key=NVIDIA_API_KEY
 )
 
@@ -115,6 +115,20 @@ st.markdown("""
         div[data-testid="stExpander"] [role="transition-container"] {
             background-color: #12131a !important;
             padding: 15px !important;
+        }
+        
+        /* Spezifische Korrekturen für Streamlits neuere HTML-Klassen */
+        .streamlit-expanderHeader {
+            background-color: #1a1c23 !important;
+            color: #ffffff !important;
+        }
+        .streamlit-expanderContent {
+            background-color: #12131a !important;
+            color: #ffffff !important;
+        }
+        div[data-testid="stExpander"] svg {
+            fill: #00e676 !important;
+            color: #00e676 !important;
         }
         
         /* Tabs (Team-Reiter) */
@@ -551,5 +565,3 @@ if shared_state["autoplay"] and shared_state["time_left"] > 0:
 elif shared_state["autoplay"] is False:
     time.sleep(1.0)
     st.rerun()
-```
-eof
