@@ -22,18 +22,28 @@ st.set_page_config(layout="wide", page_title="MAKE Football Team - AI Match", pa
 # =====================================================================
 st.markdown("""
     <style>
-        /* Globaler Hintergrund & Schriftfarbe */
+        /* Globaler Hintergrund & edle Typografie */
         .stApp {
             background-color: #0b0c10 !important;
             color: #f5f5f7 !important;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
         
         /* Titel & Überschriften Kontrast */
         h1, h2, h3, h4, h5, h6 {
             color: #ffffff !important;
             font-weight: 800 !important;
-            letter-spacing: -0.5px;
+            letter-spacing: -0.7px;
+        }
+        
+        /* Edle Rahmen für das Gaming-Dashboard */
+        div[data-testid="column"] {
+            background-color: #12131a;
+            padding: 20px !important;
+            border-radius: 12px;
+            border: 1px solid #1f222e;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            margin-bottom: 20px;
         }
         
         /* Dropdowns, Selectboxen & Eingabefelder */
@@ -46,62 +56,83 @@ st.markdown("""
         
         /* Textareas für die Prompts */
         .stTextArea textarea {
-            background-color: #12131a !important;
+            background-color: #090a0f !important;
             color: #e4e6eb !important;
             border: 1px solid #2f3346 !important;
-            border-radius: 8px !important;
-            font-size: 14px !important;
-            padding: 12px !important;
-            transition: all 0.3s ease;
+            border-radius: 6px !important;
+            font-size: 13.5px !important;
+            padding: 10px !important;
+            transition: all 0.25s ease;
         }
         .stTextArea textarea:focus {
             border-color: #00e676 !important;
-            box-shadow: 0 0 10px rgba(0, 230, 118, 0.2) !important;
+            box-shadow: 0 0 8px rgba(0, 230, 118, 0.2) !important;
         }
         
-        /* Labels über den Textareas (Sehr wichtig für die Lesbarkeit!) */
+        /* Labels über den Widgets */
         label[data-testid="stWidgetLabel"] {
-            color: #00e676 !important;
-            font-weight: 700 !important;
-            font-size: 14px !important;
-            margin-bottom: 6px !important;
+            color: #8a90a6 !important;
+            font-weight: 600 !important;
+            font-size: 13.5px !important;
+            margin-bottom: 4px !important;
+        }
+        
+        /* Modernisiertes Expander/Akkordeon Design für die Spieler */
+        div[data-testid="stExpander"] {
+            background-color: #16171f !important;
+            border: 1px solid #252836 !important;
+            border-radius: 8px !important;
+            margin-bottom: 8px !important;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        div[data-testid="stExpander"]:hover {
+            border-color: #3e445b !important;
+        }
+        div[data-testid="stExpander"] [data-testid="stExpanderHeader"] {
+            font-weight: bold !important;
+            color: #ffffff !important;
+            padding: 10px 15px !important;
         }
         
         /* Tabs (Team-Reiter) */
         button[data-baseweb="tab"] {
             color: #8a90a6 !important;
-            font-size: 15px !important;
-            font-weight: 700 !important;
-            padding: 10px 20px !important;
-            transition: all 0.3s ease;
+            font-size: 14.5px !important;
+            font-weight: 800 !important;
+            padding: 12px 18px !important;
+            background-color: transparent !important;
+            border: none !important;
+            transition: all 0.25s ease;
         }
         button[data-baseweb="tab"][aria-selected="true"] {
             color: #00e676 !important;
             border-bottom: 3px solid #00e676 !important;
         }
         
-        /* Custom Button Styling (Macht aus den weißen Balken echte Knöpfe) */
+        /* Custom Button Styling (Hochwertige e-sports Buttons) */
         div.stButton > button {
-            background-color: #16171e !important;
+            background: linear-gradient(135deg, #16171e 0%, #1d1f2a 100%) !important;
             color: #ffffff !important;
             border: 1px solid #3a3f58 !important;
             border-radius: 8px !important;
-            padding: 10px 24px !important;
+            padding: 12px 24px !important;
             font-weight: 700 !important;
             font-size: 14px !important;
-            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
             width: 100%;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: all 0.2s ease !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
         div.stButton > button:hover {
             border-color: #00e676 !important;
             color: #00e676 !important;
-            box-shadow: 0 0 15px rgba(0, 230, 118, 0.25) !important;
-            transform: translateY(-1px);
+            box-shadow: 0 0 20px rgba(0, 230, 118, 0.3) !important;
+            transform: translateY(-1.5px);
         }
         div.stButton > button:active {
-            transform: translateY(1px);
+            transform: translateY(0.5px);
         }
         
         /* Stopp-Button farbliche Anpassung */
@@ -110,12 +141,12 @@ st.markdown("""
         }
         div.stButton > button:contains("⏹"):hover {
             color: #ff1744 !important;
-            box-shadow: 0 0 15px rgba(255, 23, 68, 0.25) !important;
+            box-shadow: 0 0 20px rgba(255, 23, 68, 0.3) !important;
         }
         
         /* Debug Console Box */
         div[data-testid="stCodeBlock"] {
-            background-color: #090a0f !important;
+            background-color: #07080a !important;
             border: 1px solid #1a1c23 !important;
             border-radius: 8px !important;
         }
@@ -131,7 +162,7 @@ TRANSLATIONS = {
         "btn_stop": "⏹️ STOP MATCH",
         "btn_start": "▶️ START MATCH",
         "prompt_hdr": "Live Prompt Engineering",
-        "prompt_cap": "Changes here affect players live on the next game tick! You can type in ANY language.",
+        "prompt_cap": "Changes here affect players live on the next game tick! Make edits, then click outside or press Ctrl+Enter to apply.",
         "btn_reset": "🔄 RESET BALL TO CENTER",
         "debug_hdr": "Debug Console (Live Single-Query JSON)",
         "sim_title": "MAKE Live Simulation",
@@ -145,7 +176,7 @@ TRANSLATIONS = {
         "btn_stop": "⏹️ SPIEL STOPPEN",
         "btn_start": "▶️ SPIEL STARTEN",
         "prompt_hdr": "Live Prompt Engineering",
-        "prompt_cap": "Änderungen hier beeinflussen die Spieler live beim nächsten Takt! Eingabe in JEDER Sprache möglich.",
+        "prompt_cap": "Änderungen hier beeinflussen die Spieler live! Text anpassen, dann außerhalb klicken oder Strg+Enter drücken zum Bestätigen.",
         "btn_reset": "🔄 BALL ZURÜCKSETZEN",
         "debug_hdr": "Debug-Konsole (Sammel-Abfrage JSON)",
         "sim_title": "MAKE Live Simulation",
@@ -159,7 +190,7 @@ TRANSLATIONS = {
         "btn_stop": "⏹️ ARRÊTER LE MATCH",
         "btn_start": "▶️ Démarrer Le Match",
         "prompt_hdr": "Ingénierie des Prompts en Direct",
-        "prompt_cap": "Les modifications ici affectent les joueurs en direct au prochain tour! Écrivez dans n'importe quelle langue.",
+        "prompt_cap": "Les modifications ici affectent les joueurs en direct au prochain tour! Modifiez, puis cliquez à l'extérieur ou appuyez sur Ctrl+Entrée.",
         "btn_reset": "🔄 RÉINITIALISER LE BALLON",
         "debug_hdr": "Console de Débogage (Sortie JSON unique)",
         "sim_title": "Simulation en Direct MAKE",
@@ -173,7 +204,7 @@ TRANSLATIONS = {
         "btn_stop": "⏹️ DETENER PARTIDO",
         "btn_start": "▶️ INICIAR PARTIDO",
         "prompt_hdr": "Ingeniería de Prompts en Vivo",
-        "prompt_cap": "¡Los cambios aquí afectan a los jugadores en vivo! Puedes escribir en cualquier idioma.",
+        "prompt_cap": "¡Los cambios aquí afectan a los jugadores en vivo! Edita el texto, luego haz clic fuera o presiona Ctrl+Enter para aplicar.",
         "btn_reset": "🔄 REINICIAR BALÓN",
         "debug_hdr": "Consola de Depuración (Consulta Única JSON)",
         "sim_title": "Simulación en Vivo MAKE",
@@ -187,7 +218,7 @@ TRANSLATIONS = {
         "btn_stop": "⏹️ ZATRZYMAJ MECZ",
         "btn_start": "▶️ URUCHOM MECZ",
         "prompt_hdr": "Inżynieria Promptów na Żywo",
-        "prompt_cap": "Zmiany tutaj wpływają na graczy na żywo! Możesz pisać w dowolnym języku.",
+        "prompt_cap": "Zmiany tutaj wpływają na graczy na żywo! Po edycji kliknij poza polem lub naciśnij Ctrl+Enter, aby zastosować.",
         "btn_reset": "🔄 RESETUJ PIĘKĘ",
         "debug_hdr": "Konsola Debugowania (Zbiór danych JSON)",
         "sim_title": "Symulacja na Żywo MAKE",
@@ -341,7 +372,7 @@ def generate_pitch_html(state, t):
     <html>
     <head>
         <style>
-            /* WICHTIG: Verhindert die Scrollbalken im iframe */
+            /* WICHTIG: Verhindert die Scrollbalken im iframe vollständig */
             body {{
                 margin: 0;
                 padding: 0;
@@ -353,7 +384,7 @@ def generate_pitch_html(state, t):
                 padding: 12px;
                 border-radius: 10px;
                 color: white;
-                font-family: sans-serif;
+                font-family: 'Inter', sans-serif;
                 box-sizing: border-box;
             }}
         </style>
@@ -419,7 +450,7 @@ def generate_pitch_html(state, t):
 # =====================================================================
 # 6. STREAMLIT FRONTEND-LAYOUT
 # =====================================================================
-col_left, col_right = st.columns([1, 1.2])
+col_left, col_right = st.columns([1, 1.25])
 
 with col_left:
     st.session_state.ui_lang = st.selectbox(
@@ -448,23 +479,29 @@ with col_left:
         for name, p in list(shared_state["players"].items()):
             if p["team"] == "Red":
                 role_display = name.split('_')[1].upper()
-                shared_state["players"][name]["prompt"] = st.text_area(
-                    f"🔴 Red {role_display} Strategy:",
-                    value=p["prompt"],
-                    key=f"input_{name}",
-                    height=65
-                )
+                # Verwende einen Expander, um Vertikal-Platz zu sparen!
+                with st.expander(f"🔴 RED {role_display} - Prompt", expanded=(role_display == "STRIKER")):
+                    shared_state["players"][name]["prompt"] = st.text_area(
+                        "Prompt String:",
+                        value=p["prompt"],
+                        key=f"input_{name}",
+                        height=70,
+                        label_visibility="collapsed"
+                    )
                 
     with tab_blue:
         for name, p in list(shared_state["players"].items()):
             if p["team"] == "Blue":
                 role_display = name.split('_')[1].upper()
-                shared_state["players"][name]["prompt"] = st.text_area(
-                    f"🔵 Blue {role_display} Strategy:",
-                    value=p["prompt"],
-                    key=f"input_{name}",
-                    height=65
-                )
+                # Verwende einen Expander, um Vertikal-Platz zu sparen!
+                with st.expander(f"🔵 BLUE {role_display} - Prompt", expanded=(role_display == "STRIKER")):
+                    shared_state["players"][name]["prompt"] = st.text_area(
+                        "Prompt String:",
+                        value=p["prompt"],
+                        key=f"input_{name}",
+                        height=70,
+                        label_visibility="collapsed"
+                    )
 
     if st.button(lang["btn_reset"], use_container_width=True):
         reset_ball()
