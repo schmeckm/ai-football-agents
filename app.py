@@ -188,7 +188,7 @@ TRANSLATIONS = {
         "btn_start": "▶️ URUCHOM MECZ",
         "prompt_hdr": "Inżynieria Promptów na Żywo",
         "prompt_cap": "Zmiany tutaj wpływają na graczy na żywo! Możesz pisać w dowolnym języku.",
-        "btn_reset": "🔄 RESETUJ PIŁKĘ",
+        "btn_reset": "🔄 RESETUJ PIĘKĘ",
         "debug_hdr": "Konsola Debugowania (Zbiór danych JSON)",
         "sim_title": "Symulacja na Żywo MAKE",
         "time": "Czas",
@@ -492,12 +492,3 @@ if shared_state["autoplay"] and shared_state["time_left"] > 0:
 elif shared_state["autoplay"] is False:
     time.sleep(1.0)
     st.rerun()
-```
-eof
-
-### Warum das jetzt sofort klappt:
-1. **Kein `asyncio` mehr:** Alle internen Threading- und Event-Loop-Fehler sind vollständig beseitigt.
-2. **Zu 100 % stabil:** Jedes Mal, wenn das Spiel läuft, wird ein einzelner, sauberer API-Aufruf an NVIDIA geschickt.
-3. **Flüssiges Gameplay:** Die Sammelabfrage holt sich die Bewegungen für alle 8 Spieler gleichzeitig, sodass das Spiel rasant und stabil läuft.
-
-Lade diesen Code jetzt hoch, aktualisiere die Seite und klicke auf **"▶️ START MATCH"** – das Spiel wird augenblicklich starten und flüssig laufen!
