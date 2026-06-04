@@ -1,6 +1,8 @@
 """
 MAKE Football Team - FastAPI Backend
-Endpoint /api/move forwards game state to NVIDIA llama-3.1-8b-instruct.
+Endpoints:
+  POST /api/move        -> game move decisions
+  POST /api/commentary  -> live match commentary
 """
 import os
 import re
@@ -35,6 +37,9 @@ def log(msg: str):
     print(msg, file=sys.stderr, flush=True)
 
 
+# =====================================================================
+# /api/move
+# =====================================================================
 class Player(BaseModel):
     team: str
     x: float
@@ -61,7 +66,6 @@ def zero_moves(players: Dict[str, Player]) -> Dict[str, Dict]:
 
 
 def clamp_move(mv: Dict) -> Dict:
-    """Clamp to -5..+5. Llama sometimes returns absolute coords; this saves the game."""
     try:
         x = float(mv.get("x", 0) or 0)
         y = float(mv.get("y", 0) or 0)
@@ -75,7 +79,6 @@ def clamp_move(mv: Dict) -> Dict:
 
 
 def extract_json(raw: str) -> Dict:
-    """Strip markdown fences, find the largest {...} block, parse it."""
     cleaned = re.sub(r"```(?:json)?\s*", "", raw)
     cleaned = re.sub(r"```", "", cleaned)
     m = re.search(r"\{.*\}", cleaned, re.DOTALL)
@@ -168,6 +171,100 @@ async def get_moves(req: MoveRequest):
         return MoveResponse(moves=zero_moves(req.players), debug=f"ERROR: {err}")
 
 
+# =====================================================================
+# /api/commentary
+# =====================================================================
+class CommentaryRequest(BaseModel):
+    event: str = "ambient"
+    team_red_name: str = "Red"
+    team_blue_name: str = "Blue"
+    score_red: int = 0
+    score_blue: int = 0
+    time_left: float = 90.0
+    extra: str = ""
+
+
+class CommentaryResponse(BaseModel):
+    text: str
+    debug: str = ""
+
+
+CANNED_COMMENTARY = {
+    "kickoff":     "And the match is underway!",
+    "goal_red":    "GOAL! What a finish!",
+    "goal_blue":   "GOAL! Stunning play!",
+    "halftime":    "The halftime whistle blows.",
+    "fulltime":    "And that is full time!",
+    "ambient":     "End-to-end stuff here.",
+}
+
+
+@app.post("/api/commentary", response_model=CommentaryResponse)
+async def get_commentary(req: CommentaryRequest):
+    event_desc = {
+        "kickoff":   "The match has just kicked off.",
+        "goal_red":  f"{req.team_red_name} just scored.",
+        "goal_blue": f"{req.team_blue_name} just scored.",
+        "halftime":  "It is halftime.",
+        "fulltime":  "The match is over.",
+        "ambient":   "The match is in play.",
+    }.get(req.event, req.event)
+
+    system = (
+        "You are an excited football match commentator on live TV. "
+        "Reply with ONE short, energetic sentence — maximum 14 words. "
+        "No quotes, no asterisks, no markdown formatting. Just the sentence."
+    )
+    user = (
+        f"Score: {req.team_red_name} {req.score_red} - {req.score_blue} {req.team_blue_name}. "
+        f"Time left: {int(req.time_left)}s. "
+        f"Event: {event_desc} "
+        f"{req.extra}\n"
+        f"Commentary now:"
+    )
+
+    try:
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            r = await client.post(
+                NVIDIA_URL,
+                headers={
+                    "Authorization": f"Bearer {NVIDIA_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": MODEL_ID,
+                    "messages": [
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": user},
+                    ],
+                    "temperature": 0.9,
+                    "max_tokens": 50,
+                },
+            )
+            r.raise_for_status()
+            data = r.json()
+            text = data["choices"][0]["message"]["content"].strip()
+            text = text.strip('"\'`*').split("\n")[0].strip()
+            if len(text) > 160:
+                text = text[:157] + "..."
+            log(f"[commentary] {req.event} -> {text}")
+            return CommentaryResponse(text=text)
+
+    except Exception as e:
+        log(f"[commentary] ERROR: {e}")
+        fallback = CANNED_COMMENTARY.get(req.event, "The match continues...")
+        if req.event == "goal_red":
+            fallback = f"GOAL for {req.team_red_name}!"
+        elif req.event == "goal_blue":
+            fallback = f"GOAL for {req.team_blue_name}!"
+        elif req.event == "halftime":
+            fallback = f"Halftime. {req.team_red_name} {req.score_red}, {req.team_blue_name} {req.score_blue}."
+        return CommentaryResponse(text=fallback, debug=f"fallback: {e}")
+
+
+# =====================================================================
+# static + health
+# =====================================================================
 @app.get("/health")
 async def health():
     return {"status": "ok", "model": MODEL_ID}
