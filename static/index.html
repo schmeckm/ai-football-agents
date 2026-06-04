@@ -346,12 +346,12 @@ const INITIAL_POS = {
 
 function defaultPrompts(nameRed, nameBlue) {
   return {
-    red_striker:    `You are the ${nameRed} Striker. Sprint to the ball and shoot right into the ${nameBlue} goal.`,
-    red_midfielder: `You are the ${nameRed} Midfielder. Distribute the ball to the striker and support from behind.`,
-    red_defender:   `You are the ${nameRed} Defender. Stay on your half and clear the ball away from the ${nameRed} goal.`,
-    blue_striker:   `You are the ${nameBlue} Striker. Chase the ball and shoot left into the ${nameRed} goal.`,
-    blue_midfielder:`You are the ${nameBlue} Midfielder. Stop ${nameRed} attacks and pass the ball to the ${nameBlue} striker.`,
-    blue_defender:  `You are the ${nameBlue} Defender. Guard the right goal area and block ${nameRed} attackers.`,
+    red_striker:    `You are the ${nameRed} Striker. Always run toward the ball at top speed. When you reach the ball, kick it toward the right side (positive x). Be aggressive.`,
+    red_midfielder: `You are the ${nameRed} Midfielder. Always move toward the ball, but stay a bit behind the striker. Support attacks and intercept opponents in the middle of the field.`,
+    red_defender:   `You are the ${nameRed} Defender. When the ball is in your left half of the field, run toward it and kick it away to the right. When the ball is far away on the right side, stay close to your starting position on the left.`,
+    blue_striker:   `You are the ${nameBlue} Striker. Always run toward the ball at top speed. When you reach the ball, kick it toward the left side (negative x). Be aggressive.`,
+    blue_midfielder:`You are the ${nameBlue} Midfielder. Always move toward the ball, but stay a bit behind the striker. Support attacks and intercept opponents in the middle of the field.`,
+    blue_defender:  `You are the ${nameBlue} Defender. When the ball is in your right half of the field, run toward it and kick it away to the left. When the ball is far away on the left side, stay close to your starting position on the right.`,
   };
 }
 
