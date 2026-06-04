@@ -1,9 +1,10 @@
-__pycache__/
-*.pyc
-*.pyo
-.env
-.venv/
-venv/
-.DS_Store
-.idea/
-.vscode/
+services:
+  make-football:
+    build: .
+    container_name: make-football
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY}
+      - MODEL_ID=${MODEL_ID:-meta/llama-3.1-8b-instruct}

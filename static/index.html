@@ -309,14 +309,17 @@
 // =====================================================================
 const FIELD_W = 800, FIELD_H = 500;
 const GOAL_MIN = 175, GOAL_MAX = 325;
+const GOAL_CENTER_Y = (GOAL_MIN + GOAL_MAX) / 2;
 const BALL_START = { x: FIELD_W / 2, y: FIELD_H / 2 };
 const PLAYER_RADIUS = 14;
 const BALL_RADIUS = 8;
-const KICK_RANGE_SQ = 25 * 25;
-const PLAYER_SPEED_SCALE = 10;
-const BALL_KICK_VX = 200;
-const BALL_FRICTION_PER_SEC = 0.28;
-const LLM_INTERVAL_MS = 1600;  // 1.6s -> ~37 req/min, below NVIDIA 40/min limit
+const KICK_RANGE_SQ = 28 * 28;
+const TOUCH_DIST_SQ = (PLAYER_RADIUS + BALL_RADIUS + 3) ** 2;  // auto-kick on contact
+const PLAYER_SPEED_SCALE = 12;
+const KICK_POWER = 420;                  // px/sec, much stronger
+const BALL_FRICTION_PER_SEC = 0.42;      // less friction, ball travels further
+const KICK_COOLDOWN_SEC = 0.3;           // min gap between kicks to avoid ping-pong
+const LLM_INTERVAL_MS = 1600;            // 1.6s -> ~37 req/min, below NVIDIA 40/min limit
 
 const NATIONS = {
   "Argentina":   { flag: "🇦🇷", color: "#75aadb" }, "Austria":     { flag: "🇦🇹", color: "#ed2939" },
@@ -370,6 +373,7 @@ const state = {
   score: { Red: 0, Blue: 0 },
   autoplay: false,
   ball: { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 },
+  ballKickCooldown: 0,
   ballTrail: [],
   teamRed:  { name: "Make Red",  nation: "Switzerland", color: "#ff1744" },
   teamBlue: { name: "Make Blue", nation: "Germany",     color: "#00b0ff" },
@@ -575,21 +579,40 @@ function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
 function resetBall() {
   state.ball = { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 };
+  state.ballKickCooldown = 0;
   state.ballTrail = [];
 }
 
 function physicsStep(dt) {
+  // Cooldown ticks down each frame, prevents the same ball getting kicked every frame
+  state.ballKickCooldown = Math.max(0, state.ballKickCooldown - dt);
+
   for (const p of Object.values(state.players)) {
     if (!isActive(p)) continue;
     p.x = clamp(p.x + p.dx * dt * PLAYER_SPEED_SCALE, 20, FIELD_W - 20);
     p.y = clamp(p.y + p.dy * dt * PLAYER_SPEED_SCALE, 20, FIELD_H - 20);
 
-    const dx = p.x - state.ball.x;
-    const dy = p.y - state.ball.y;
-    if (dx*dx + dy*dy < KICK_RANGE_SQ && p.kick) {
-      const dir = p.team === "Red" ? 1 : -1;
-      state.ball.vx = dir * BALL_KICK_VX;
-      state.ball.vy = (state.ball.y - p.y) * 3.5;
+    const ddx = p.x - state.ball.x;
+    const ddy = p.y - state.ball.y;
+    const dist2 = ddx*ddx + ddy*ddy;
+
+    // Two ways to kick:
+    //  1) Player is touching the ball -> auto-kick (regardless of LLM)
+    //  2) Player is in kick range AND LLM said k:true
+    const touching = dist2 < TOUCH_DIST_SQ;
+    const llmKick  = dist2 < KICK_RANGE_SQ && p.kick;
+
+    if ((touching || llmKick) && state.ballKickCooldown <= 0) {
+      // Auto-aim at the opponent goal center
+      const goalX = (p.team === "Red") ? FIELD_W : 0;
+      const aimX = goalX - state.ball.x;
+      const aimY = GOAL_CENTER_Y - state.ball.y;
+      const aimLen = Math.hypot(aimX, aimY) || 1;
+      // Small random spread so games feel less mechanical
+      const spread = (Math.random() - 0.5) * 0.15;
+      state.ball.vx = (aimX / aimLen) * KICK_POWER;
+      state.ball.vy = (aimY / aimLen) * KICK_POWER + spread * KICK_POWER;
+      state.ballKickCooldown = KICK_COOLDOWN_SEC;
     }
   }
 
