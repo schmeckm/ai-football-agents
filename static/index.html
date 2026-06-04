@@ -191,12 +191,15 @@
     border: 1px solid #1a1c23;
     border-radius: 8px;
     padding: 12px;
-    max-height: 200px;
+    max-height: 240px;
     overflow: auto;
     font-size: 11.5px;
     color: #b4b8c5;
     margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
+  pre.debug .dbg { color: #ffb74d; }
 
   #pitch-wrap {
     background: #111215;
@@ -310,10 +313,10 @@ const BALL_START = { x: FIELD_W / 2, y: FIELD_H / 2 };
 const PLAYER_RADIUS = 14;
 const BALL_RADIUS = 8;
 const KICK_RANGE_SQ = 25 * 25;
-const PLAYER_SPEED_SCALE = 10;   // dx/dy units → px/sec ratio
-const BALL_KICK_VX = 200;        // px/sec
+const PLAYER_SPEED_SCALE = 10;
+const BALL_KICK_VX = 200;
 const BALL_FRICTION_PER_SEC = 0.28;
-const LLM_INTERVAL_MS = 900;
+const LLM_INTERVAL_MS = 1600;  // 1.6s -> ~37 req/min, below NVIDIA 40/min limit
 
 const NATIONS = {
   "Argentina":   { flag: "🇦🇷", color: "#75aadb" }, "Austria":     { flag: "🇦🇹", color: "#ed2939" },
@@ -437,7 +440,7 @@ function applySetup() {
 }
 
 // =====================================================================
-// PROMPT EDITORS (one expander per player)
+// PROMPT EDITORS
 // =====================================================================
 function renderTabs() {
   const rf = NATIONS[state.teamRed.nation]?.flag  || "🔴";
@@ -476,7 +479,6 @@ function renderPrompts() {
       ta.addEventListener("input", (e) => {
         const playerName = e.target.dataset.player;
         state.players[playerName].prompt = e.target.value;
-        // update badge
         const badge = e.target.parentElement.querySelector(".badge");
         const active = isActive(state.players[playerName]);
         badge.className = `badge ${active ? "active" : "inactive"}`;
@@ -504,8 +506,14 @@ function updateStrategiesView() {
 }
 
 // =====================================================================
-// LLM CALL (async, non-blocking)
+// LLM CALL (async, non-blocking, with safety clamp)
 // =====================================================================
+function clampDelta(v) {
+  const n = Number(v);
+  if (isNaN(n)) return 0;
+  return Math.max(-5, Math.min(5, n));
+}
+
 async function fetchMoves() {
   if (state.pendingLLM) return;
   state.pendingLLM = true;
@@ -531,17 +539,23 @@ async function fetchMoves() {
     });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
-    state.lastLLMDebug = JSON.stringify(data.moves, null, 2);
+
+    // Show backend debug message + parsed moves
+    const debugLine = data.debug
+      ? `// backend: ${String(data.debug).slice(0, 280)}\n`
+      : "";
+    state.lastLLMDebug = debugLine + JSON.stringify(data.moves, null, 2);
     state.apiError = null;
 
-    for (const [name, mv] of Object.entries(data.moves)) {
+    for (const [name, mv] of Object.entries(data.moves || {})) {
       const p = state.players[name];
       if (!p) continue;
       if (!isActive(p)) {
         p.dx = 0; p.dy = 0; p.kick = false;
       } else {
-        p.dx = Number(mv.x) || 0;
-        p.dy = Number(mv.y) || 0;
+        // Client-side safety clamp (backend also clamps)
+        p.dx   = clampDelta(mv.x);
+        p.dy   = clampDelta(mv.y);
         p.kick = !!mv.k;
       }
     }
@@ -565,7 +579,6 @@ function resetBall() {
 }
 
 function physicsStep(dt) {
-  // Players
   for (const p of Object.values(state.players)) {
     if (!isActive(p)) continue;
     p.x = clamp(p.x + p.dx * dt * PLAYER_SPEED_SCALE, 20, FIELD_W - 20);
@@ -580,18 +593,15 @@ function physicsStep(dt) {
     }
   }
 
-  // Ball
   state.ball.x += state.ball.vx * dt;
   state.ball.y += state.ball.vy * dt;
   const fric = Math.pow(BALL_FRICTION_PER_SEC, dt);
   state.ball.vx *= fric;
   state.ball.vy *= fric;
 
-  // Trail
   state.ballTrail.push({ x: state.ball.x, y: state.ball.y });
   if (state.ballTrail.length > 16) state.ballTrail.shift();
 
-  // Goal detection
   if (state.ball.x > FIELD_W - 20 && state.ball.y > GOAL_MIN && state.ball.y < GOAL_MAX) {
     state.score.Red += 1;
     resetBall();
@@ -619,7 +629,6 @@ const ctx = canvas.getContext("2d");
 function renderPitch() {
   ctx.clearRect(0, 0, FIELD_W, FIELD_H);
 
-  // Lines
   ctx.strokeStyle = "rgba(255,255,255,0.8)";
   ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(FIELD_W/2, 0); ctx.lineTo(FIELD_W/2, FIELD_H); ctx.stroke();
@@ -627,22 +636,18 @@ function renderPitch() {
   ctx.beginPath(); ctx.arc(FIELD_W/2, FIELD_H/2, 3, 0, Math.PI * 2);
   ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fill();
 
-  // Penalty boxes
   ctx.strokeRect(0, 125, 100, 250);
   ctx.strokeRect(FIELD_W - 100, 125, 100, 250);
 
-  // Goals
   ctx.fillStyle = "rgba(255,255,255,0.22)";
   ctx.fillRect(0, GOAL_MIN, 10, GOAL_MAX - GOAL_MIN);
   ctx.fillRect(FIELD_W - 10, GOAL_MIN, 10, GOAL_MAX - GOAL_MIN);
 
-  // Watermark
   ctx.fillStyle = "rgba(255,255,255,0.13)";
   ctx.font = "bold 30px 'Impact', sans-serif";
   ctx.textAlign = "center";
   ctx.fillText("MAKE FOOTBALL TEAM", FIELD_W/2, FIELD_H/2 + 10);
 
-  // Ball trail
   for (let i = 0; i < state.ballTrail.length; i++) {
     const alpha = (i + 1) / state.ballTrail.length * 0.5;
     ctx.beginPath();
@@ -651,13 +656,11 @@ function renderPitch() {
     ctx.fill();
   }
 
-  // Ball
   ctx.beginPath();
   ctx.arc(state.ball.x, state.ball.y, BALL_RADIUS, 0, Math.PI * 2);
   ctx.fillStyle = "#fff"; ctx.fill();
   ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.stroke();
 
-  // Players
   for (const [name, p] of Object.entries(state.players)) {
     const baseColor = p.team === "Red" ? state.teamRed.color : state.teamBlue.color;
     const active = isActive(p);
@@ -727,7 +730,7 @@ function renderApiError() {
 let lastFrame = performance.now();
 
 function loop(now) {
-  const dt = Math.min((now - lastFrame) / 1000, 1/30);  // cap dt
+  const dt = Math.min((now - lastFrame) / 1000, 1/30);
   lastFrame = now;
 
   if (state.autoplay && state.timeLeft > 0) {
@@ -751,7 +754,7 @@ function loop(now) {
 }
 
 // =====================================================================
-// EVENT WIRING
+// EVENTS
 // =====================================================================
 document.getElementById("btn_apply").addEventListener("click", applySetup);
 
