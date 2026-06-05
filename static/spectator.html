@@ -364,6 +364,107 @@
   const BALL_RADIUS = 8;
   const POLL_INTERVAL_MS = 250;
 
+  // ===== Avatar helpers (same as main page) =====
+  function hashString(s) {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) h = ((h ^ s.charCodeAt(i)) * 16777619) >>> 0;
+    return h;
+  }
+  const SKIN_TONES   = ["#fcd9b8","#f0c098","#d6a17a","#b8804a","#8a5a32","#5d3a1c"];
+  const HAIR_COLORS  = ["#1a0e08","#3a200e","#6b4523","#a87436","#c69a4f","#d4d4d4","#b03020"];
+  const HAIR_STYLES  = ["short","spiky","curly","bald","buzz","mohawk","long"];
+  const MOUTH_STYLES = ["neutral","smile","smirk"];
+  function generateAppearance(name) {
+    const h = hashString(name);
+    return {
+      skin:  SKIN_TONES[h % SKIN_TONES.length],
+      hair:  HAIR_COLORS[Math.floor(h / 7) % HAIR_COLORS.length],
+      style: HAIR_STYLES[Math.floor(h / 13) % HAIR_STYLES.length],
+      mouth: MOUTH_STYLES[Math.floor(h / 23) % MOUTH_STYLES.length],
+    };
+  }
+  function drawHair(ctx, cx, cy, head_r, app) {
+    ctx.fillStyle = app.hair;
+    switch (app.style) {
+      case "short":
+        ctx.beginPath(); ctx.arc(cx, cy, head_r * 1.02, Math.PI, Math.PI * 2);
+        ctx.lineTo(cx + head_r * 0.95, cy + 1); ctx.lineTo(cx - head_r * 0.95, cy + 1);
+        ctx.closePath(); ctx.fill(); break;
+      case "spiky":
+        ctx.beginPath(); ctx.arc(cx, cy, head_r * 1.02, Math.PI * 1.05, Math.PI * 1.95);
+        ctx.closePath(); ctx.fill();
+        for (const off of [-3.5, -1, 1.5, 4]) {
+          ctx.beginPath();
+          ctx.moveTo(cx + off, cy - head_r);
+          ctx.lineTo(cx + off + 1, cy - head_r - 3.2);
+          ctx.lineTo(cx + off + 2, cy - head_r);
+          ctx.closePath(); ctx.fill();
+        } break;
+      case "curly":
+        for (const [dx, dy] of [[-4.5,-head_r],[-1.5,-head_r-1.5],[1.5,-head_r-1.5],[4.5,-head_r],[-5.5,-head_r+1.5],[5.5,-head_r+1.5]]) {
+          ctx.beginPath(); ctx.arc(cx + dx, cy + dy, 1.9, 0, Math.PI * 2); ctx.fill();
+        } break;
+      case "bald": break;
+      case "buzz":
+        ctx.globalAlpha = 0.55;
+        ctx.beginPath(); ctx.arc(cx, cy, head_r * 0.98, Math.PI * 1.1, Math.PI * 1.9);
+        ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1; break;
+      case "mohawk":
+        ctx.fillRect(cx - 1.4, cy - head_r - 2.5, 2.8, 4);
+        ctx.beginPath(); ctx.arc(cx, cy, head_r, Math.PI * 1.1, Math.PI * 1.9);
+        ctx.closePath(); ctx.fill(); break;
+      case "long":
+        ctx.beginPath(); ctx.arc(cx, cy, head_r * 1.05, Math.PI * 0.9, Math.PI * 2.1);
+        ctx.lineTo(cx + head_r * 1.05, cy + head_r * 0.5);
+        ctx.lineTo(cx - head_r * 1.05, cy + head_r * 0.5);
+        ctx.closePath(); ctx.fill(); break;
+    }
+  }
+  function drawMouth(ctx, cx, head_cy, head_r, style) {
+    ctx.strokeStyle = "#3a1810"; ctx.lineWidth = 0.9;
+    const my = head_cy + head_r * 0.42;
+    ctx.beginPath();
+    if (style === "smile") ctx.arc(cx, my - 1, 2, 0.1 * Math.PI, 0.9 * Math.PI);
+    else if (style === "smirk") { ctx.moveTo(cx - 1.5, my); ctx.quadraticCurveTo(cx, my - 1, cx + 2, my - 0.6); }
+    else { ctx.moveTo(cx - 1.7, my); ctx.lineTo(cx + 1.7, my); }
+    ctx.stroke();
+  }
+  function drawAvatar(ctx, cx, cy, teamColor, role, appearance, active) {
+    const isGK = role === "Goalkeeper";
+    const r = isGK ? PLAYER_RADIUS + 2 : PLAYER_RADIUS;
+    if (!active) {
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = teamColor + "80"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]); return;
+    }
+    // Glow
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 1.8);
+    g.addColorStop(0, teamColor + "55"); g.addColorStop(1, "transparent");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, r * 1.8, 0, Math.PI * 2); ctx.fill();
+    // Jersey
+    const jerseyColor = isGK ? "#ffd54f" : teamColor;
+    ctx.fillStyle = jerseyColor;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = 1; ctx.stroke();
+    // Head
+    const head_r = r * 0.62;
+    const head_cy = cy - r * 0.18;
+    ctx.fillStyle = appearance.skin;
+    ctx.beginPath(); ctx.arc(cx, head_cy, head_r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.lineWidth = 0.6; ctx.stroke();
+    drawHair(ctx, cx, head_cy, head_r, appearance);
+    ctx.fillStyle = "#1a1a1a";
+    ctx.beginPath(); ctx.arc(cx - head_r * 0.42, head_cy - head_r * 0.1, 0.95, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + head_r * 0.42, head_cy - head_r * 0.1, 0.95, 0, Math.PI * 2); ctx.fill();
+    drawMouth(ctx, cx, head_cy, head_r, appearance.mouth);
+    if (isGK) {
+      ctx.strokeStyle = teamColor; ctx.lineWidth = 2.6;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+
   const canvas = document.getElementById("pitch");
   const ctx = canvas.getContext("2d");
 
@@ -418,45 +519,10 @@
     }
   }
 
-  function drawPlayer(p, teamColor) {
+  function drawPlayer(p, teamColor, nameKey) {
+    const appearance = p.appearance || generateAppearance(nameKey || "default");
     const active = p.active !== false;
-    const isGK = p.role === "Goalkeeper";
-    const radius = isGK ? PLAYER_RADIUS + 2 : PLAYER_RADIUS;
-
-    if (active) {
-      // Glow
-      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius * 1.8);
-      g.addColorStop(0, teamColor + "66");
-      g.addColorStop(1, "transparent");
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, radius * 1.8, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = teamColor;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = isGK ? "#ffd54f" : "rgba(255, 255, 255, 0.85)";
-      ctx.lineWidth = isGK ? 3 : 2;
-      ctx.stroke();
-
-      if (isGK) {
-        ctx.fillStyle = "#ffd54f";
-        ctx.font = "bold 10px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText("GK", p.x, p.y + 3);
-      }
-    } else {
-      ctx.setLineDash([4, 4]);
-      ctx.strokeStyle = teamColor + "80";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
+    drawAvatar(ctx, p.x, p.y, teamColor, p.role, appearance, active);
   }
 
   function drawBall(ball) {
@@ -488,7 +554,7 @@
       drawBallTrail(data.replay.frame.ballTrail);
       for (const [name, p] of Object.entries(data.replay.frame.players || {})) {
         const color = p.team === "Red" ? "#ff1744" : "#00b0ff";
-        drawPlayer(p, color);
+        drawPlayer(p, color, name);
       }
       drawBall(data.replay.frame.ball);
       return;
@@ -498,7 +564,7 @@
 
     for (const [name, p] of Object.entries(data.players || {})) {
       const color = p.team === "Red" ? "#ff1744" : "#00b0ff";
-      drawPlayer(p, color);
+      drawPlayer(p, color, name);
     }
     drawBall(data.ball);
   }

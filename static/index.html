@@ -192,6 +192,12 @@
   #btn-commentary, #btn-tts { width: auto; padding: 5px 12px; font-size: 11px; }
   #btn-commentary.on { background: linear-gradient(135deg, #4a3a00, #6a5300); color: #ffd700; border-color: #ffd700; box-shadow: 0 0 12px rgba(255, 215, 0, 0.4); }
   #commentary-list { display: flex; flex-direction: column; gap: 6px; max-height: 140px; overflow-y: auto; }
+  #voice-row { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; font-size: 11px; color: #8a90a6; }
+  #voice-row .voice-label { text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; flex-shrink: 0; }
+  #voice-row select { flex: 1; min-width: 0; background: #1a1c23; color: #fff; border: 1px solid #2f3346; border-radius: 6px; padding: 4px 8px; font-size: 11.5px; font-family: inherit; }
+  #voice-row select:disabled { opacity: 0.4; }
+  #btn-voice-test { width: auto; padding: 4px 10px; font-size: 11px; background: rgba(26, 28, 35, 0.8); border: 1px solid #2f3346; text-transform: none; letter-spacing: 0; }
+  #btn-voice-test:hover { color: #ffd700; border-color: #ffd700; box-shadow: 0 0 8px rgba(255, 215, 0, 0.3); }
   .commentary-item { background: linear-gradient(135deg, rgba(255, 215, 0, 0.06), transparent); border-left: 2px solid #ffd700; padding: 8px 12px; border-radius: 4px; font-size: 13.5px; font-style: italic; line-height: 1.4; animation: commentaryIn 0.4s ease-out; }
   @keyframes commentaryIn { from { transform: translateX(-12px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
   .commentary-time { color: #8a90a6; font-size: 10.5px; margin-right: 8px; font-family: 'Orbitron', monospace; font-style: normal; }
@@ -419,6 +425,11 @@
           <button id="btn-commentary" title="Enable AI commentary">OFF</button>
         </div>
       </div>
+      <div id="voice-row">
+        <span class="voice-label">Voice:</span>
+        <select id="voice-picker"></select>
+        <button id="btn-voice-test" title="Test voice">🔊 Test</button>
+      </div>
       <div id="commentary-list"></div>
     </div>
   </div>
@@ -455,6 +466,11 @@ const REPLAY_SPEED = 0.35;
 const GK_RED_X_MIN = 25, GK_RED_X_MAX = 110;
 const GK_BLUE_X_MIN = FIELD_W - 110, GK_BLUE_X_MAX = FIELD_W - 25;
 const GK_Y_MIN = 150, GK_Y_MAX = 350;
+
+// Referee
+const REF_SPEED = 90;             // px/sec
+const REF_OFFSET_X = 90;          // ref stays diagonally behind/aside
+const REF_OFFSET_Y = 70;
 
 const HISTORY_KEY    = "make-football-history-v1";
 const MUTE_KEY       = "make-football-muted-v1";
@@ -528,7 +544,12 @@ function buildPlayers() {
   const prompts = defaultPrompts();
   const players = {};
   for (const [name, base] of Object.entries(INITIAL_POS)) {
-    players[name] = { ...base, prompt: prompts[name], dx: 0, dy: 0, kick: false };
+    players[name] = {
+      ...base,
+      prompt: prompts[name],
+      dx: 0, dy: 0, kick: false,
+      appearance: generateAppearance(name),
+    };
   }
   return players;
 }
@@ -595,6 +616,232 @@ class AudioFX {
   }
 }
 const audioFX = new AudioFX();
+
+// =====================================================================
+// VOICE MANAGER — better TTS with voice picker
+// =====================================================================
+const VOICE_KEY = "make-football-voice-v1";
+class VoiceManager {
+  constructor() {
+    this.voices = [];
+    this.preferred = null;
+    if (!("speechSynthesis" in window)) return;
+    this.loadVoices();
+    speechSynthesis.onvoiceschanged = () => this.loadVoices();
+  }
+  loadVoices() {
+    this.voices = speechSynthesis.getVoices();
+    // 1. Try saved preference
+    const saved = localStorage.getItem(VOICE_KEY);
+    if (saved) {
+      const v = this.voices.find(x => x.voiceURI === saved);
+      if (v) { this.preferred = v; this.renderPicker(); return; }
+    }
+    // 2. Auto-select: prefer male British voice, then male US, then any English
+    const tests = [
+      v => v.lang === "en-GB" && /daniel|male|man|google uk english male|microsoft george|microsoft ryan/i.test(v.name),
+      v => v.lang === "en-GB" && !/female|woman|hazel|libby|sonia/i.test(v.name),
+      v => v.lang === "en-US" && /male|man|google us english|microsoft david|microsoft guy|microsoft eric/i.test(v.name),
+      v => v.lang === "en-US" && !/female|woman|samantha|karen|moira|tessa|zira|aria|jenny/i.test(v.name),
+      v => v.lang.startsWith("en-GB"),
+      v => v.lang.startsWith("en-AU"),
+      v => v.lang.startsWith("en"),
+    ];
+    for (const test of tests) {
+      const found = this.voices.find(test);
+      if (found) { this.preferred = found; break; }
+    }
+    this.renderPicker();
+  }
+  renderPicker() {
+    const sel = document.getElementById("voice-picker");
+    if (!sel) return;
+    const enVoices = this.voices.filter(v => v.lang.startsWith("en"));
+    if (enVoices.length === 0) {
+      sel.innerHTML = '<option value="">— no English voices —</option>';
+      sel.disabled = true; return;
+    }
+    sel.disabled = false;
+    sel.innerHTML = enVoices.map(v => {
+      const flag = v.lang === "en-GB" ? "🇬🇧" : v.lang === "en-US" ? "🇺🇸" : v.lang === "en-AU" ? "🇦🇺" : "🌐";
+      const sel = v === this.preferred ? "selected" : "";
+      return `<option value="${v.voiceURI}" ${sel}>${flag} ${escapeHTML(v.name)}</option>`;
+    }).join("");
+  }
+  setVoiceByURI(uri) {
+    const v = this.voices.find(x => x.voiceURI === uri);
+    if (v) { this.preferred = v; localStorage.setItem(VOICE_KEY, uri); }
+  }
+  speak(text) {
+    if (!("speechSynthesis" in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    if (this.preferred) u.voice = this.preferred;
+    u.rate = 1.22;   // faster, like an excited commentator
+    u.pitch = 0.92;  // slightly deeper
+    u.volume = 1.0;
+    speechSynthesis.speak(u);
+  }
+  test() {
+    this.speak("And it's a goal! What a strike, right into the top corner!");
+  }
+}
+const voiceManager = new VoiceManager();
+
+// =====================================================================
+// AVATAR — cartoon faces, deterministic per player name
+// =====================================================================
+function hashString(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = ((h ^ s.charCodeAt(i)) * 16777619) >>> 0;
+  return h;
+}
+
+const SKIN_TONES   = ["#fcd9b8", "#f0c098", "#d6a17a", "#b8804a", "#8a5a32", "#5d3a1c"];
+const HAIR_COLORS  = ["#1a0e08", "#3a200e", "#6b4523", "#a87436", "#c69a4f", "#d4d4d4", "#b03020"];
+const HAIR_STYLES  = ["short", "spiky", "curly", "bald", "buzz", "mohawk", "long"];
+const MOUTH_STYLES = ["neutral", "smile", "smirk"];
+
+function generateAppearance(playerName) {
+  const h = hashString(playerName);
+  return {
+    skin:  SKIN_TONES[h % SKIN_TONES.length],
+    hair:  HAIR_COLORS[Math.floor(h / 7) % HAIR_COLORS.length],
+    style: HAIR_STYLES[Math.floor(h / 13) % HAIR_STYLES.length],
+    mouth: MOUTH_STYLES[Math.floor(h / 23) % MOUTH_STYLES.length],
+  };
+}
+
+function drawHair(ctx, cx, cy, head_r, app) {
+  ctx.fillStyle = app.hair;
+  switch (app.style) {
+    case "short": {
+      ctx.beginPath();
+      ctx.arc(cx, cy, head_r * 1.02, Math.PI, Math.PI * 2);
+      ctx.lineTo(cx + head_r * 0.95, cy + 1);
+      ctx.lineTo(cx - head_r * 0.95, cy + 1);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case "spiky": {
+      ctx.beginPath();
+      ctx.arc(cx, cy, head_r * 1.02, Math.PI * 1.05, Math.PI * 1.95);
+      ctx.closePath(); ctx.fill();
+      for (const off of [-3.5, -1, 1.5, 4]) {
+        ctx.beginPath();
+        ctx.moveTo(cx + off,       cy - head_r);
+        ctx.lineTo(cx + off + 1,   cy - head_r - 3.2);
+        ctx.lineTo(cx + off + 2,   cy - head_r);
+        ctx.closePath(); ctx.fill();
+      }
+      break;
+    }
+    case "curly": {
+      for (const [dx, dy] of [[-4.5,-head_r],[-1.5,-head_r-1.5],[1.5,-head_r-1.5],[4.5,-head_r],[-5.5,-head_r+1.5],[5.5,-head_r+1.5]]) {
+        ctx.beginPath();
+        ctx.arc(cx + dx, cy + dy, 1.9, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    }
+    case "bald":
+      break;
+    case "buzz": {
+      ctx.globalAlpha = 0.55;
+      ctx.beginPath();
+      ctx.arc(cx, cy, head_r * 0.98, Math.PI * 1.1, Math.PI * 1.9);
+      ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1;
+      break;
+    }
+    case "mohawk": {
+      ctx.fillRect(cx - 1.4, cy - head_r - 2.5, 2.8, 4);
+      ctx.beginPath();
+      ctx.arc(cx, cy, head_r * 1.0, Math.PI * 1.1, Math.PI * 1.9);
+      ctx.closePath(); ctx.fill();
+      break;
+    }
+    case "long": {
+      ctx.beginPath();
+      ctx.arc(cx, cy, head_r * 1.05, Math.PI * 0.9, Math.PI * 2.1);
+      ctx.lineTo(cx + head_r * 1.05, cy + head_r * 0.5);
+      ctx.lineTo(cx - head_r * 1.05, cy + head_r * 0.5);
+      ctx.closePath(); ctx.fill();
+      break;
+    }
+  }
+}
+
+function drawMouth(ctx, cx, head_cy, head_r, mouthStyle) {
+  ctx.strokeStyle = "#3a1810";
+  ctx.lineWidth = 0.9;
+  const my = head_cy + head_r * 0.42;
+  ctx.beginPath();
+  if (mouthStyle === "smile") {
+    ctx.arc(cx, my - 1, 2, 0.1 * Math.PI, 0.9 * Math.PI);
+  } else if (mouthStyle === "smirk") {
+    ctx.moveTo(cx - 1.5, my);
+    ctx.quadraticCurveTo(cx, my - 1, cx + 2, my - 0.6);
+  } else {
+    ctx.moveTo(cx - 1.7, my);
+    ctx.lineTo(cx + 1.7, my);
+  }
+  ctx.stroke();
+}
+
+function drawAvatar(ctx, cx, cy, teamColor, role, appearance, active) {
+  const isGK = role === "Goalkeeper";
+  const r = isGK ? PLAYER_RADIUS + 2 : PLAYER_RADIUS;
+
+  if (!active) {
+    ctx.globalAlpha = 0.32; ctx.fillStyle = teamColor;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.font = "bold 9px 'Inter', sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(isGK ? "GK" : role.slice(0, 3).toUpperCase(), cx, cy + 3);
+    return;
+  }
+
+  // Outer glow
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = teamColor;
+  ctx.beginPath(); ctx.arc(cx, cy, r + 5, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Jersey body — GK gets classic yellow with team-colour ring
+  const jerseyColor = isGK ? "#ffd54f" : teamColor;
+  ctx.fillStyle = jerseyColor;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = 1; ctx.stroke();
+
+  // Head
+  const head_r = r * 0.62;
+  const head_cy = cy - r * 0.18;
+  ctx.fillStyle = appearance.skin;
+  ctx.beginPath(); ctx.arc(cx, head_cy, head_r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.lineWidth = 0.6; ctx.stroke();
+
+  // Hair on top
+  drawHair(ctx, cx, head_cy, head_r, appearance);
+
+  // Eyes
+  ctx.fillStyle = "#1a1a1a";
+  ctx.beginPath(); ctx.arc(cx - head_r * 0.42, head_cy - head_r * 0.1, 0.95, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + head_r * 0.42, head_cy - head_r * 0.1, 0.95, 0, Math.PI * 2); ctx.fill();
+
+  // Mouth
+  drawMouth(ctx, cx, head_cy, head_r, appearance.mouth);
+
+  // GK gets team-coloured ring
+  if (isGK) {
+    ctx.strokeStyle = teamColor; ctx.lineWidth = 2.6;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+  }
+}
 
 // =====================================================================
 // CONFETTI
@@ -693,6 +940,8 @@ const state = {
   lastHeatmapSample: 0,
   // State sync
   lastStatePush: 0,
+  // Referee — follows ball with diagonal offset
+  referee: { x: FIELD_W / 2 - 80, y: FIELD_H / 2 + 80, armRaised: 0 },
 };
 
 // =====================================================================
@@ -1091,11 +1340,7 @@ function pushCommentary(text) {
   state.commentaries.unshift({ time: Math.max(0, state.timeLeft), text });
   if (state.commentaries.length > 10) state.commentaries.pop();
   renderCommentaries();
-  if (state.ttsEnabled && "speechSynthesis" in window) {
-    const u = new SpeechSynthesisUtterance(text);
-    u.rate = 1.15; u.pitch = 1.05; u.volume = 0.9;
-    speechSynthesis.cancel(); speechSynthesis.speak(u);
-  }
+  if (state.ttsEnabled) voiceManager.speak(text);
 }
 
 function renderCommentaries() {
@@ -1188,6 +1433,7 @@ function triggerGoalFlash(team) {
   confetti.burst(state.ball.x, state.ball.y, color, "#ffd700");
   document.body.classList.remove("shake"); void document.body.offsetWidth; document.body.classList.add("shake");
   setTimeout(() => document.body.classList.remove("shake"), 600);
+  raiseRefArm();
   fetchCommentary(team === "Red" ? "goal_red" : "goal_blue");
 }
 
@@ -1279,6 +1525,9 @@ function physicsStep(dt) {
 
   replayBuffer.capture(dt);
 
+  // Referee follows ball with diagonal offset
+  updateReferee(dt);
+
   // Heatmap sampling
   state.lastHeatmapSample += dt;
   if (state.lastHeatmapSample >= HEATMAP_SAMPLE_MS / 1000) {
@@ -1298,7 +1547,7 @@ async function pushStateToServer() {
   try {
     const playersOut = {};
     for (const [name, p] of Object.entries(state.players)) {
-      playersOut[name] = { x: p.x, y: p.y, team: p.team, role: p.role, active: isActive(p) };
+      playersOut[name] = { x: p.x, y: p.y, team: p.team, role: p.role, active: isActive(p), appearance: p.appearance };
     }
     let replayFrame = null;
     if (state.replay.active && state.replay.frames.length > 0) {
@@ -1332,6 +1581,77 @@ async function pushStateToServer() {
       }),
     });
   } catch (e) { /* silent */ }
+}
+
+// =====================================================================
+// REFEREE
+// =====================================================================
+function updateReferee(dt) {
+  // Decide which side of the ball the ref runs (further from action)
+  const ballOnLeftHalf = state.ball.x < FIELD_W / 2;
+  const targetX = ballOnLeftHalf ? state.ball.x + REF_OFFSET_X : state.ball.x - REF_OFFSET_X;
+  const targetY = state.ball.y > FIELD_H / 2 ? state.ball.y - REF_OFFSET_Y : state.ball.y + REF_OFFSET_Y;
+
+  const dx = targetX - state.referee.x;
+  const dy = targetY - state.referee.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist > 3) {
+    const move = Math.min(dist, REF_SPEED * dt);
+    state.referee.x += (dx / dist) * move;
+    state.referee.y += (dy / dist) * move;
+  }
+  state.referee.x = clamp(state.referee.x, 25, FIELD_W - 25);
+  state.referee.y = clamp(state.referee.y, 25, FIELD_H - 25);
+
+  // Arm raised animation decays
+  state.referee.armRaised = Math.max(0, state.referee.armRaised - dt);
+}
+
+function raiseRefArm() {
+  state.referee.armRaised = 1.6; // seconds
+}
+
+function drawReferee(ctx, x, y) {
+  const r = 11;
+  // Shadow
+  ctx.globalAlpha = 0.25;
+  ctx.fillStyle = "#000";
+  ctx.beginPath(); ctx.ellipse(x, y + r + 1, r * 0.85, 3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Yellow jersey body
+  ctx.fillStyle = "#ffd700";
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+
+  // Black vertical stripes (referee jersey style)
+  ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+  const stripeW = 2.2;
+  for (const offset of [-6, -2, 2, 6]) {
+    ctx.beginPath();
+    ctx.rect(x + offset - stripeW/2, y - r * 0.85, stripeW, r * 1.7);
+    ctx.fill();
+  }
+
+  // Border
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 1.8;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+
+  // Label
+  ctx.fillStyle = "#000";
+  ctx.font = "bold 8px 'Inter', sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("REF", x, y + 2.5);
+
+  // Raised arm animation (after goal)
+  if (state.referee.armRaised > 0) {
+    const alpha = Math.min(1, state.referee.armRaised / 1.6);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#ffd700";
+    ctx.font = "bold 14px sans-serif";
+    ctx.fillText("☝️", x, y - r - 6);
+    ctx.globalAlpha = 1;
+  }
 }
 
 // =====================================================================
@@ -1390,26 +1710,13 @@ function renderPitch() {
     const pInfo = getPlayer(name);
     if (!pInfo) continue;
     const baseColor = pInfo.team === "Red" ? state.teamRed.color : state.teamBlue.color;
-    const isGoalie = pInfo.role === "Goalkeeper";
-    const radius = isGoalie ? PLAYER_RADIUS + 2 : PLAYER_RADIUS;
-    if (pInfo.active) {
-      ctx.globalAlpha = 0.25; ctx.fillStyle = baseColor;
-      ctx.beginPath(); ctx.arc(pInfo.x, pInfo.y, radius + 5, 0, Math.PI * 2); ctx.fill();
-      ctx.globalAlpha = 1; ctx.fillStyle = baseColor;
-      ctx.beginPath(); ctx.arc(pInfo.x, pInfo.y, radius, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = isGoalie ? "#ffd700" : "#fff";
-      ctx.lineWidth = isGoalie ? 2.4 : 1.8;
-      ctx.setLineDash([]); ctx.stroke();
-      ctx.fillStyle = "rgba(255,255,255,0.95)";
-    } else {
-      ctx.globalAlpha = 0.32; ctx.fillStyle = baseColor;
-      ctx.beginPath(); ctx.arc(pInfo.x, pInfo.y, radius, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]); ctx.stroke();
-      ctx.setLineDash([]); ctx.globalAlpha = 1; ctx.fillStyle = "rgba(255,255,255,0.55)";
-    }
-    ctx.font = "bold 10px 'Inter', sans-serif"; ctx.textAlign = "center";
-    const label = isGoalie ? "GK" : name.split("_")[1].slice(0, 3).toUpperCase();
-    ctx.fillText(label, pInfo.x, pInfo.y + 3);
+    const appearance = state.players[name].appearance || generateAppearance(name);
+    drawAvatar(ctx, pInfo.x, pInfo.y, baseColor, pInfo.role, appearance, pInfo.active);
+  }
+
+  // Referee (only in live mode, not in replay)
+  if (!state.replay.active) {
+    drawReferee(ctx, state.referee.x, state.referee.y);
   }
 
   ctx.globalAlpha = 1;
@@ -1665,6 +1972,11 @@ document.getElementById("btn-tts").addEventListener("click", () => {
   localStorage.setItem(TTS_KEY, state.ttsEnabled ? "1" : "0");
   renderCommentaryButton();
 });
+
+document.getElementById("voice-picker").addEventListener("change", (e) => {
+  voiceManager.setVoiceByURI(e.target.value);
+});
+document.getElementById("btn-voice-test").addEventListener("click", () => voiceManager.test());
 
 document.getElementById("ft-new").addEventListener("click", () => {
   hideFullTime();
