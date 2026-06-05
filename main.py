@@ -3,13 +3,17 @@ MAKE Football Team - FastAPI Backend
 Endpoints:
   POST /api/move               -> game move decisions
   POST /api/commentary         -> live match commentary
-  POST /api/generate_strategy  -> generate 3 position prompts from a free-text intent
+  POST /api/generate_strategy  -> generate 3 position prompts from intent
+  POST /api/state              -> main client pushes current state
+  GET  /api/state              -> spectator polls current state
+  GET  /spectator              -> spectator page (mobile-friendly read-only)
 """
 import os
 import re
 import sys
+import time
 import json
-from typing import Dict
+from typing import Dict, Any, Optional
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -55,6 +59,7 @@ class Player(BaseModel):
     x: float
     y: float
     prompt: str
+    role: Optional[str] = ""
 
 
 class MoveRequest(BaseModel):
@@ -94,13 +99,23 @@ async def get_moves(req: MoveRequest):
     if not active:
         return MoveResponse(moves=zero_moves(req.players), debug="no active players")
 
+    has_goalie = any("goalkeeper" in n for n in active)
+
     strategies = "\n".join(
-        f"- {name} (team {p.team}): {p.prompt}" for name, p in active.items()
+        f"- {name} (team {p.team}, role {p.role or 'player'}): {p.prompt}"
+        for name, p in active.items()
     )
     positions = ", ".join(
         f"{n}=({int(p.x)},{int(p.y)})" for n, p in active.items()
     )
     ball_pos = f"({int(req.ball.get('x', 0))},{int(req.ball.get('y', 0))})"
+
+    goalie_note = ""
+    if has_goalie:
+        goalie_note = (
+            "\nGOALKEEPERS: Red goalkeeper must stay near x=25..110, Blue goalkeeper near "
+            f"x={req.field_w-110}..{req.field_w-25}. Both stay in y=150..350 (goal area).\n"
+        )
 
     system = (
         "You control football players. Output ONE JSON object only, no prose, no markdown.\n\n"
@@ -114,13 +129,15 @@ async def get_moves(req: MoveRequest):
         "* NEVER output numbers like 200, 400, 780. ALWAYS small numbers between -5 and +5.\n\n"
         f"FIELD: {req.field_w} wide, {req.field_h} tall. "
         f"Red team ('{req.team_red_name}') attacks the RIGHT goal at x={req.field_w}. "
-        f"Blue team ('{req.team_blue_name}') attacks the LEFT goal at x=0.\n\n"
-        "EXAMPLES:\n"
+        f"Blue team ('{req.team_blue_name}') attacks the LEFT goal at x=0."
+        + goalie_note +
+        "\nEXAMPLES:\n"
         '* Striker at (200,250), ball at (300,200) -> {"x":5,"y":-2,"k":false}   (run toward ball)\n'
-        '* Striker at (350,200), ball at (355,205) -> {"x":1,"y":1,"k":true}     (touching ball, kick!)\n'
-        '* Midfielder at (200,300), ball at (400,200) -> {"x":4,"y":-3,"k":false}  (chase the ball)\n'
-        '* Defender at (100,250), ball at (600,250) -> {"x":-1,"y":0,"k":false}  (ball far away, hold)\n\n'
-        "RULE OF THUMB: if ball.x > player.x set x positive; if ball.x < player.x set x negative. Same for y.\n\n"
+        '* Striker at (350,200), ball at (355,205) -> {"x":1,"y":1,"k":true}     (touching, kick!)\n'
+        '* Midfielder at (200,300), ball at (400,200) -> {"x":4,"y":-3,"k":false} (chase ball)\n'
+        '* Defender at (100,250), ball at (600,250) -> {"x":-1,"y":0,"k":false}  (ball far, hold)\n'
+        '* Goalkeeper at (50,250), ball at (300,200) -> {"x":0,"y":-1,"k":false} (track ball Y only)\n\n'
+        "RULE OF THUMB: if ball.x > player.x set x positive; if ball.x < player.x set x negative.\n\n"
         "PLAYER STRATEGIES:\n" + strategies
     )
     user = f"State: ball at {ball_pos}, players at {positions}. Output JSON now."
@@ -132,7 +149,7 @@ async def get_moves(req: MoveRequest):
             {"role": "user", "content": user},
         ],
         "temperature": 0.2,
-        "max_tokens": 180,
+        "max_tokens": 220,
     }
 
     raw = ""
@@ -140,24 +157,19 @@ async def get_moves(req: MoveRequest):
         async with httpx.AsyncClient(timeout=8.0) as client:
             r = await client.post(
                 NVIDIA_URL,
-                headers={
-                    "Authorization": f"Bearer {NVIDIA_API_KEY}",
-                    "Content-Type": "application/json",
-                },
+                headers={"Authorization": f"Bearer {NVIDIA_API_KEY}", "Content-Type": "application/json"},
                 json=payload,
             )
             r.raise_for_status()
             data = r.json()
             raw = data["choices"][0]["message"]["content"].strip()
             parsed = extract_json(raw)
-
             cleaned = {}
             for n in req.players.keys():
                 if n in parsed and isinstance(parsed[n], dict):
                     cleaned[n] = clamp_move(parsed[n])
                 else:
                     cleaned[n] = {"x": 0, "y": 0, "k": False}
-
             sample = next(iter(cleaned.values()))
             log(f"[move] OK active={len(active)} sample={sample}")
             return MoveResponse(moves=cleaned, debug=raw[:500])
@@ -208,39 +220,25 @@ async def get_commentary(req: CommentaryRequest):
     )
     user = (
         f"Score: {req.team_red_name} {req.score_red} - {req.score_blue} {req.team_blue_name}. "
-        f"Time left: {int(req.time_left)}s. "
-        f"Event: {event_desc} "
-        f"{req.extra}\n"
-        f"Commentary now:"
+        f"Time left: {int(req.time_left)}s. Event: {event_desc} {req.extra}\nCommentary now:"
     )
-
     try:
         async with httpx.AsyncClient(timeout=6.0) as client:
             r = await client.post(
                 NVIDIA_URL,
-                headers={
-                    "Authorization": f"Bearer {NVIDIA_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": MODEL_ID,
-                    "messages": [
-                        {"role": "system", "content": system},
-                        {"role": "user", "content": user},
-                    ],
-                    "temperature": 0.9,
-                    "max_tokens": 50,
-                },
+                headers={"Authorization": f"Bearer {NVIDIA_API_KEY}", "Content-Type": "application/json"},
+                json={"model": MODEL_ID, "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ], "temperature": 0.9, "max_tokens": 50},
             )
             r.raise_for_status()
-            data = r.json()
-            text = data["choices"][0]["message"]["content"].strip()
+            text = r.json()["choices"][0]["message"]["content"].strip()
             text = text.strip('"\'`*').split("\n")[0].strip()
             if len(text) > 160:
                 text = text[:157] + "..."
             log(f"[commentary] {req.event} -> {text}")
             return CommentaryResponse(text=text)
-
     except Exception as e:
         log(f"[commentary] ERROR: {e}")
         canned = {
@@ -266,6 +264,7 @@ class StrategyGenResponse(BaseModel):
     striker: str = ""
     midfielder: str = ""
     defender: str = ""
+    goalkeeper: str = ""
     debug: str = ""
 
 
@@ -277,54 +276,70 @@ async def generate_strategy(req: StrategyGenRequest):
 
     system = (
         "You are a football tactics coach writing instructions for AI-controlled players. "
-        "Given a team name and a tactical intent, write THREE separate prompts — one each for "
-        "the STRIKER, the MIDFIELDER, and the DEFENDER. Each prompt must:\n"
+        "Given a team name and a tactical intent, write FOUR separate prompts — one each for "
+        "the STRIKER, MIDFIELDER, DEFENDER, and GOALKEEPER. Each prompt must:\n"
         "  - be 2 to 4 sentences\n"
         "  - describe concrete movement rules and decision triggers\n"
         "  - reflect the tactical intent\n"
-        "  - be written in English, plain prose, no markdown\n\n"
+        "  - be written in English, plain prose, no markdown\n"
+        "The GOALKEEPER stays in the goal area; describe how it tracks the ball.\n\n"
         "Respond with VALID JSON ONLY, exactly this shape, nothing else:\n"
-        '{"striker":"...","midfielder":"...","defender":"..."}'
+        '{"striker":"...","midfielder":"...","defender":"...","goalkeeper":"..."}'
     )
-    user = f"Team: {req.team_name}. Tactical intent: {intent}\n\nWrite the three prompts now."
+    user = f"Team: {req.team_name}. Tactical intent: {intent}\n\nWrite the four prompts now."
 
     raw = ""
     try:
-        async with httpx.AsyncClient(timeout=12.0) as client:
+        async with httpx.AsyncClient(timeout=14.0) as client:
             r = await client.post(
                 NVIDIA_URL,
-                headers={
-                    "Authorization": f"Bearer {NVIDIA_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": MODEL_ID,
-                    "messages": [
-                        {"role": "system", "content": system},
-                        {"role": "user", "content": user},
-                    ],
-                    "temperature": 0.7,
-                    "max_tokens": 500,
-                },
+                headers={"Authorization": f"Bearer {NVIDIA_API_KEY}", "Content-Type": "application/json"},
+                json={"model": MODEL_ID, "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ], "temperature": 0.7, "max_tokens": 600},
             )
             r.raise_for_status()
-            data = r.json()
-            raw = data["choices"][0]["message"]["content"].strip()
+            raw = r.json()["choices"][0]["message"]["content"].strip()
             parsed = extract_json(raw)
-
-            striker    = str(parsed.get("striker", "")).strip()
-            midfielder = str(parsed.get("midfielder", "")).strip()
-            defender   = str(parsed.get("defender", "")).strip()
-
             log(f"[gen_strategy] intent={intent[:60]!r} ok")
             return StrategyGenResponse(
-                striker=striker, midfielder=midfielder, defender=defender,
+                striker=str(parsed.get("striker", "")).strip(),
+                midfielder=str(parsed.get("midfielder", "")).strip(),
+                defender=str(parsed.get("defender", "")).strip(),
+                goalkeeper=str(parsed.get("goalkeeper", "")).strip(),
                 debug=raw[:400],
             )
     except Exception as e:
         err = f"{type(e).__name__}: {str(e)[:160]}"
         log(f"[gen_strategy] ERROR: {err} | raw={raw[:200]}")
         return StrategyGenResponse(debug=f"ERROR: {err}")
+
+
+# =====================================================================
+# /api/state — main client pushes, spectator polls
+# =====================================================================
+_match_state: Dict[str, Any] = {"data": None, "ts": 0.0}
+
+
+class StateUpdate(BaseModel):
+    payload: Dict[str, Any]
+
+
+@app.post("/api/state")
+async def update_state(req: StateUpdate):
+    _match_state["data"] = req.payload
+    _match_state["ts"] = time.time()
+    return {"ok": True}
+
+
+@app.get("/api/state")
+async def get_state():
+    return {
+        "data": _match_state["data"],
+        "ts": _match_state["ts"],
+        "stale": (time.time() - _match_state["ts"]) > 3.0 if _match_state["ts"] else True,
+    }
 
 
 # =====================================================================
@@ -341,3 +356,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/")
 async def root():
     return FileResponse("static/index.html")
+
+
+@app.get("/spectator")
+async def spectator():
+    return FileResponse("static/spectator.html")
