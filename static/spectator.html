@@ -151,16 +151,24 @@
     background: linear-gradient(135deg, #0d2818 0%, #0f3520 100%);
   }
   .ad-banner {
-    height: 26px; line-height: 26px;
+    height: 30px; line-height: 30px;
     text-align: center;
     font-family: "Orbitron", monospace;
     font-weight: 900; font-size: 12px;
     text-transform: uppercase; letter-spacing: 2px;
-    background: #1a1c23; color: #ffd700;
-    border-radius: 4px; margin: 4px 0;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.10) 0%, transparent 25%, transparent 70%, rgba(0,0,0,0.30) 100%),
+      radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08) 0.4px, transparent 1.2px),
+      #1a1c23;
+    background-size: 100% 100%, 4px 4px, 100% 100%;
+    color: #ffd700;
+    border-radius: 4px; margin: 5px 0;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
-    border: 1px solid rgba(255,255,255,0.1);
+    border-top: 1px solid rgba(255,255,255,0.15);
+    border-bottom: 2px solid rgba(0,0,0,0.7);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.15), inset 0 -6px 12px rgba(0,0,0,0.4), 0 3px 8px rgba(0,0,0,0.4);
+    text-shadow: 0 0 5px currentColor, 0 0 2px rgba(0,0,0,0.8);
+    position: relative;
   }
   #replay-banner {
     position: absolute;
@@ -546,6 +554,54 @@
     drawAvatar(ctx, p.x, p.y, teamColor, p.role, appearance, active);
   }
 
+  function drawPlane(ctx, plane) {
+    if (!plane) return;
+    const px = plane.x, py = plane.y;
+    const text = plane.text || "";
+    ctx.save();
+    // Shadow
+    ctx.globalAlpha = 0.18; ctx.fillStyle = "#000";
+    ctx.beginPath(); ctx.ellipse(px, py + 14, 12, 3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    // Wings
+    ctx.fillStyle = "#9aa0b0";
+    ctx.beginPath(); ctx.moveTo(px-1,py); ctx.lineTo(px-9,py-6); ctx.lineTo(px-4,py+1); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(px-1,py); ctx.lineTo(px-9,py+6); ctx.lineTo(px-4,py-1); ctx.closePath(); ctx.fill();
+    // Fuselage
+    ctx.fillStyle = "#e8e8ec";
+    ctx.beginPath(); ctx.ellipse(px, py, 14, 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#1a1a1a"; ctx.lineWidth = 0.9; ctx.stroke();
+    // Cockpit
+    ctx.fillStyle = "#3a82bd";
+    ctx.beginPath(); ctx.ellipse(px+7, py-0.5, 3, 1.8, 0, 0, Math.PI * 2); ctx.fill();
+    // Tail
+    ctx.fillStyle = "#9aa0b0";
+    ctx.beginPath(); ctx.moveTo(px-11,py); ctx.lineTo(px-16,py-5); ctx.lineTo(px-11,py-1); ctx.closePath(); ctx.fill();
+    // Rope
+    ctx.strokeStyle = "rgba(80,80,80,0.7)"; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(px-14, py+1); ctx.lineTo(px-36, py+4); ctx.stroke();
+    // Banner
+    const flagH = 18;
+    const flagW = Math.max(60, 9 * text.length + 16);
+    const bx = px - 36 - flagW;
+    const by = py + 4 - flagH/2;
+    ctx.globalAlpha = 0.15; ctx.fillStyle = "#000";
+    ctx.fillRect(bx+2, by+2, flagW, flagH);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = plane.bg || "#1a1c23";
+    ctx.fillRect(bx, by, flagW, flagH);
+    ctx.fillStyle = "rgba(255,255,255,0.15)"; ctx.fillRect(bx, by, flagW, 2);
+    ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fillRect(bx, by + flagH - 2, flagW, 2);
+    ctx.strokeStyle = "rgba(0,0,0,0.8)"; ctx.lineWidth = 1;
+    ctx.strokeRect(bx, by, flagW, flagH);
+    ctx.fillStyle = plane.fg || "#ffd54f";
+    ctx.font = "bold 10px 'Orbitron', sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(text, bx + flagW/2, by + flagH/2 + 1);
+    ctx.textBaseline = "alphabetic";
+    ctx.restore();
+  }
+
   function drawBall(ball) {
     // Halo
     const g = ctx.createRadialGradient(ball.x, ball.y, 0, ball.x, ball.y, BALL_RADIUS * 2.5);
@@ -588,6 +644,7 @@
       drawPlayer(p, color, name);
     }
     drawBall(data.ball);
+    drawPlane(ctx, data.plane);
   }
 
   function formatTime(seconds) {
@@ -659,14 +716,14 @@
       const top = document.getElementById("banner-top");
       const bot = document.getElementById("banner-bottom");
       if (payload.banners.top) {
-        top.textContent      = payload.banners.top.text || "";
-        top.style.background = payload.banners.top.bg || "#1a1c23";
-        top.style.color      = payload.banners.top.fg || "#ffd700";
+        top.textContent           = payload.banners.top.text || "";
+        top.style.backgroundColor = payload.banners.top.bg || "#1a1c23";
+        top.style.color           = payload.banners.top.fg || "#ffd700";
       }
       if (payload.banners.bottom) {
-        bot.textContent      = payload.banners.bottom.text || "";
-        bot.style.background = payload.banners.bottom.bg || "#1a1c23";
-        bot.style.color      = payload.banners.bottom.fg || "#00e676";
+        bot.textContent           = payload.banners.bottom.text || "";
+        bot.style.backgroundColor = payload.banners.bottom.bg || "#1a1c23";
+        bot.style.color           = payload.banners.bottom.fg || "#00e676";
       }
     }
 
