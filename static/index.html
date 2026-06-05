@@ -304,12 +304,17 @@
           <div><label>Nation</label><select id="su_nation_red"></select></div>
           <div><label>Color</label><input type="color" id="su_color_red"></div>
         </div>
+        <label>🐢 Team A dynamics: <span id="su_dyn_red_val">1.0</span>× 🐎</label>
+        <input type="range" id="su_dyn_red" min="0.5" max="2.0" step="0.1" value="1.0">
+
         <h3>Team B (right, attacks left goal)</h3>
         <div class="row cols-3">
           <div><label>Name</label><input type="text" id="su_name_blue"></div>
           <div><label>Nation</label><select id="su_nation_blue"></select></div>
           <div><label>Color</label><input type="color" id="su_color_blue"></div>
         </div>
+        <label>🐢 Team B dynamics: <span id="su_dyn_blue_val">1.0</span>× 🐎</label>
+        <input type="range" id="su_dyn_blue" min="0.5" max="2.0" step="0.1" value="1.0">
         <label>Match duration: <span id="su_duration_val">90</span>s</label>
         <input type="range" id="su_duration" min="30" max="300" step="10" value="90">
         <button class="apply" id="btn_apply" style="margin-top:10px">✅ Apply & Kickoff new match</button>
@@ -448,10 +453,10 @@ const PLAYER_RADIUS = 14;
 const BALL_RADIUS = 8;
 const KICK_RANGE_SQ = 28 * 28;
 const TOUCH_DIST_SQ = (PLAYER_RADIUS + BALL_RADIUS + 3) ** 2;
-const PLAYER_SPEED_SCALE = 12;
-const KICK_POWER = 420;
-const BALL_FRICTION_PER_SEC = 0.42;
-const KICK_COOLDOWN_SEC = 0.3;
+const PLAYER_SPEED_SCALE = 20;
+const KICK_POWER = 520;
+const BALL_FRICTION_PER_SEC = 0.55;
+const KICK_COOLDOWN_SEC = 0.25;
 const LLM_INTERVAL_MS = 1800;
 const COMMENTARY_INTERVAL_MS = 14000;
 const STATE_PUSH_MS = 200;
@@ -468,7 +473,7 @@ const GK_BLUE_X_MIN = FIELD_W - 110, GK_BLUE_X_MAX = FIELD_W - 25;
 const GK_Y_MIN = 150, GK_Y_MAX = 350;
 
 // Referee
-const REF_SPEED = 90;             // px/sec
+const REF_SPEED = 130;            // px/sec
 const REF_OFFSET_X = 90;          // ref stays diagonally behind/aside
 const REF_OFFSET_Y = 70;
 
@@ -918,8 +923,8 @@ const state = {
   autoplay: false,
   ball: { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 },
   ballKickCooldown: 0, ballTrail: [],
-  teamRed:  { name: "PTE Digital",  nation: "Switzerland", color: "#ff1744" },
-  teamBlue: { name: "PTE - Aspire", nation: "Germany",     color: "#00b0ff" },
+  teamRed:  { name: "PTE Digital",  nation: "Switzerland", color: "#ff1744", dynamics: 1.0 },
+  teamBlue: { name: "PTE - Aspire", nation: "Germany",     color: "#00b0ff", dynamics: 1.0 },
   players: buildPlayers(),
   lastLLMCall: 0, pendingLLM: false, lastLLMDebug: "{}", apiError: null,
   activeTab: "Red",
@@ -986,6 +991,10 @@ function loadSetupFromState() {
   document.getElementById("su_color_blue").value = state.teamBlue.color;
   document.getElementById("su_duration").value   = state.matchDuration;
   document.getElementById("su_duration_val").textContent = state.matchDuration;
+  document.getElementById("su_dyn_red").value    = state.teamRed.dynamics ?? 1.0;
+  document.getElementById("su_dyn_red_val").textContent  = (state.teamRed.dynamics ?? 1.0).toFixed(1);
+  document.getElementById("su_dyn_blue").value   = state.teamBlue.dynamics ?? 1.0;
+  document.getElementById("su_dyn_blue_val").textContent = (state.teamBlue.dynamics ?? 1.0).toFixed(1);
 }
 
 function applySetup() {
@@ -996,9 +1005,11 @@ function applySetup() {
   const colorRed   = document.getElementById("su_color_red").value;
   const colorBlue  = document.getElementById("su_color_blue").value;
   const duration   = parseInt(document.getElementById("su_duration").value, 10);
+  const dynRed     = parseFloat(document.getElementById("su_dyn_red").value);
+  const dynBlue    = parseFloat(document.getElementById("su_dyn_blue").value);
 
-  state.teamRed  = { name: nameRed,  nation: nationRed,  color: colorRed };
-  state.teamBlue = { name: nameBlue, nation: nationBlue, color: colorBlue };
+  state.teamRed  = { name: nameRed,  nation: nationRed,  color: colorRed,  dynamics: dynRed };
+  state.teamBlue = { name: nameBlue, nation: nationBlue, color: colorBlue, dynamics: dynBlue };
   state.matchDuration = duration; state.timeLeft = duration;
   state.score = { Red: 0, Blue: 0 }; state.autoplay = false;
   state.ball = { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 };
@@ -1452,6 +1463,7 @@ function physicsStep(dt) {
 
   for (const p of Object.values(state.players)) {
     if (!isActive(p)) continue;
+    const dyn = (p.team === "Red" ? state.teamRed.dynamics : state.teamBlue.dynamics) ?? 1.0;
     let mdx = p.dx, mdy = p.dy;
     if (mdx === 0 && mdy === 0) {
       const bDx = state.ball.x - p.x, bDy = state.ball.y - p.y;
@@ -1459,16 +1471,16 @@ function physicsStep(dt) {
       if (bDist > 1) {
         let speed = 0;
         const ownHalf = (p.team === "Red" && state.ball.x < FIELD_W / 2) || (p.team === "Blue" && state.ball.x > FIELD_W / 2);
-        if      (p.role === "Striker")             speed = 4;
-        else if (p.role === "Midfielder")          speed = 3;
-        else if (p.role === "Defender" && ownHalf) speed = 3;
-        else if (p.role === "Goalkeeper")          speed = 2;
+        if      (p.role === "Striker")             speed = 5;
+        else if (p.role === "Midfielder")          speed = 4;
+        else if (p.role === "Defender" && ownHalf) speed = 4;
+        else if (p.role === "Goalkeeper")          speed = 3;
         if (speed > 0) { mdx = (bDx / bDist) * speed; mdy = (bDy / bDist) * speed; }
       }
     }
 
-    p.x = p.x + mdx * dt * PLAYER_SPEED_SCALE;
-    p.y = p.y + mdy * dt * PLAYER_SPEED_SCALE;
+    p.x = p.x + mdx * dt * PLAYER_SPEED_SCALE * dyn;
+    p.y = p.y + mdy * dt * PLAYER_SPEED_SCALE * dyn;
 
     // Goalkeeper movement constraint
     if (p.role === "Goalkeeper") {
@@ -1493,8 +1505,9 @@ function physicsStep(dt) {
       const aimY = GOAL_CENTER_Y - state.ball.y;
       const aimLen = Math.hypot(aimX, aimY) || 1;
       const spread = (Math.random() - 0.5) * 0.15;
-      state.ball.vx = (aimX / aimLen) * KICK_POWER;
-      state.ball.vy = (aimY / aimLen) * KICK_POWER + spread * KICK_POWER;
+      const kickPower = KICK_POWER * (0.85 + dyn * 0.25);  // dynamics affects kick strength
+      state.ball.vx = (aimX / aimLen) * kickPower;
+      state.ball.vy = (aimY / aimLen) * kickPower + spread * kickPower;
       state.ballKickCooldown = KICK_COOLDOWN_SEC;
       audioFX.kick();
 
@@ -1933,6 +1946,18 @@ function loop(now) {
 document.getElementById("btn_apply").addEventListener("click", applySetup);
 document.getElementById("su_duration").addEventListener("input", (e) => {
   document.getElementById("su_duration_val").textContent = e.target.value;
+});
+
+// Dynamics sliders — apply live, no need for Apply button
+document.getElementById("su_dyn_red").addEventListener("input", (e) => {
+  const v = parseFloat(e.target.value);
+  state.teamRed.dynamics = v;
+  document.getElementById("su_dyn_red_val").textContent = v.toFixed(1);
+});
+document.getElementById("su_dyn_blue").addEventListener("input", (e) => {
+  const v = parseFloat(e.target.value);
+  state.teamBlue.dynamics = v;
+  document.getElementById("su_dyn_blue_val").textContent = v.toFixed(1);
 });
 
 document.getElementById("btn_start_stop").addEventListener("click", () => {
