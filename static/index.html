@@ -981,23 +981,124 @@ const ANTHEMS = {
   ],
 };
 
+// Maps a flag emoji to a list of filenames to try (in order) under /static/anthems/.
+// The app accepts both ISO 2-letter codes (matching nationalanthems.info naming) and full nation slugs.
+// First file that exists wins; if none exist, the synthesised fallback plays.
+const FLAG_TO_ANTHEM_FILE = {
+  "🇨🇭": ["ch", "switzerland"],
+  "🇩🇪": ["de", "germany"],
+  "🇺🇸": ["us", "usa"],
+  "🇫🇷": ["fr", "france"],
+  "🇬🇧": ["gb", "uk"],
+  "🇮🇹": ["it", "italy"],
+  "🇪🇸": ["es", "spain"],
+  "🇧🇷": ["br", "brazil"],
+  "🇦🇷": ["ar", "argentina"],
+  "🇯🇵": ["jp", "japan"],
+  "🇳🇱": ["nl", "netherlands"],
+  "🇵🇹": ["pt", "portugal"],
+  "🇧🇪": ["be", "belgium"],
+  "🇸🇬": ["sg", "singapore"],
+  "🇦🇹": ["at", "austria"],
+  "🇲🇽": ["mx", "mexico"],
+  "🇸🇪": ["se", "sweden"],
+  "🇵🇱": ["pl", "poland"],
+  "🇳🇴": ["no", "norway"],
+  "🇩🇰": ["dk", "denmark"],
+  "🇭🇷": ["hr", "croatia"],
+  "🇰🇷": ["kr", "south-korea"],
+  "🏴󠁧󠁢󠁥󠁮󠁧󠁿": ["gb-eng", "england", "gb", "uk"],
+};
+
 class AnthemPlayer {
-  constructor() { this.stopped = false; this.activeOscs = []; this.activeGains = []; }
+  constructor() {
+    this.stopped = false;
+    this.activeOscs = [];
+    this.activeGains = [];
+    this.activeBufferSources = [];
+    // Cache decoded MP3s and known-missing files so we don't re-fetch
+    this.mp3Cache = new Map();  // slug -> AudioBuffer | "missing"
+  }
   stop() {
     this.stopped = true;
     const now = audioFX.ctx ? audioFX.ctx.currentTime : 0;
-    // Fade out gains quickly to avoid clicks, then stop oscillators
     for (const g of this.activeGains) {
       try { g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(g.gain.value, now); g.gain.linearRampToValueAtTime(0, now + 0.05); } catch(e){}
     }
     for (const o of this.activeOscs) {
       try { o.stop(now + 0.06); } catch(e){}
     }
-    this.activeOscs = []; this.activeGains = [];
+    for (const s of this.activeBufferSources) {
+      try { s.stop(now + 0.06); } catch(e){}
+    }
+    this.activeOscs = []; this.activeGains = []; this.activeBufferSources = [];
   }
+
+  // Try to load and play an MP3 file from /static/anthems/.
+  // Returns true if MP3 played, false if it should fall back to synth.
+  async _tryMp3(flag, targetDurationSec) {
+    const candidates = FLAG_TO_ANTHEM_FILE[flag];
+    if (!candidates || candidates.length === 0) return false;
+
+    const ctx = audioFX.ctx;
+    if (!ctx) return false;
+
+    // Try each candidate filename in order
+    let audioBuffer = null;
+    let usedSlug = null;
+    for (const slug of candidates) {
+      // Cache: skip known-missing
+      const cached = this.mp3Cache.get(slug);
+      if (cached === "missing") continue;
+      if (cached) { audioBuffer = cached; usedSlug = slug; break; }
+
+      // Try to fetch
+      const url = `/static/anthems/${slug}.mp3`;
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          this.mp3Cache.set(slug, "missing");
+          continue;
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+        this.mp3Cache.set(slug, audioBuffer);
+        usedSlug = slug;
+        console.log(`[Anthem] Loaded /static/anthems/${slug}.mp3 (${audioBuffer.duration.toFixed(1)}s)`);
+        break;
+      } catch (e) {
+        this.mp3Cache.set(slug, "missing");
+      }
+    }
+
+    if (!audioBuffer) {
+      console.log(`[Anthem] No MP3 for ${flag} (tried: ${candidates.map(c => c + ".mp3").join(", ")}), using synth`);
+      return false;
+    }
+
+    // Play with fade-in/out
+    const source = ctx.createBufferSource();
+    source.buffer = audioBuffer;
+    const gain = ctx.createGain();
+    const startT = ctx.currentTime + 0.05;
+    const fadeIn = 0.15;
+    const fadeOut = 0.4;
+    const playLen = Math.min(targetDurationSec, audioBuffer.duration);
+    gain.gain.setValueAtTime(0, startT);
+    gain.gain.linearRampToValueAtTime(0.85, startT + fadeIn);
+    gain.gain.setValueAtTime(0.85, startT + playLen - fadeOut);
+    gain.gain.linearRampToValueAtTime(0, startT + playLen);
+
+    source.connect(gain).connect(ctx.destination);
+    source.start(startT, 0, playLen + 0.1);
+    this.activeBufferSources.push(source);
+
+    await new Promise(r => setTimeout(r, targetDurationSec * 1000));
+    return true;
+  }
+
   _playNote(ctx, freq, startTime, duration, volume) {
     if (!freq || duration <= 0) return;
-    // Two slightly detuned sawtooths + one sine sub for warmer brass timbre
     const layers = [
       { type: "sawtooth", detune: -4, gainMult: 1.0 },
       { type: "sawtooth", detune: +4, gainMult: 1.0 },
@@ -1014,7 +1115,6 @@ class AnthemPlayer {
       lpf.Q.value = 0.8;
       const gain = ctx.createGain();
       const v = volume * l.gainMult;
-      // Smooth envelope: attack → sustain → release
       const attack = 0.05;
       const release = Math.min(0.12, duration * 0.3);
       gain.gain.setValueAtTime(0, startTime);
@@ -1028,43 +1128,54 @@ class AnthemPlayer {
       this.activeGains.push(gain);
     }
   }
-  async play(flag, targetDurationSec = 5) {
-    console.log(`[Anthem] play(${flag}, ${targetDurationSec}s) — muted: ${audioFX.muted}`);
-    if (audioFX.muted) {
-      console.log("[Anthem] AudioFX is muted — skipping (mute button is 🔇)");
-      await new Promise(r => setTimeout(r, targetDurationSec * 1000));
-      return;
-    }
-    const ready = await audioFX.ensureCtxReady();
-    if (!ready) {
-      console.warn("[Anthem] AudioContext not ready — no sound");
-      await new Promise(r => setTimeout(r, targetDurationSec * 1000));
-      return;
-    }
-    const ctx = audioFX.ctx;
-    console.log(`[Anthem] ctx state: ${ctx.state}, currentTime: ${ctx.currentTime.toFixed(3)}`);
 
+  async _playSynth(flag, targetDurationSec) {
+    const ctx = audioFX.ctx;
+    if (!ctx) {
+      await new Promise(r => setTimeout(r, targetDurationSec * 1000));
+      return;
+    }
     const notes = ANTHEMS[flag] || ANTHEMS["default"];
-    if (!ANTHEMS[flag]) console.log(`[Anthem] no anthem for ${flag} — using default fanfare`);
+    if (!ANTHEMS[flag]) console.log(`[Anthem] no synth fallback for ${flag} — using default fanfare`);
 
     const totalNoteDuration = notes.reduce((s, n) => s + n.d, 0);
     const scale = targetDurationSec / totalNoteDuration;
-    console.log(`[Anthem] ${notes.length} notes, scaled by ${scale.toFixed(2)}x`);
+    console.log(`[Anthem] synth: ${notes.length} notes, scaled by ${scale.toFixed(2)}x`);
 
     this.stopped = false;
-    this.activeOscs = [];
-    this.activeGains = [];
     let t = ctx.currentTime + 0.08;
-    const startT = t;
     for (const n of notes) {
       if (this.stopped) break;
       const dur = n.d * scale;
       this._playNote(ctx, n.f, t, dur, 0.18);
       t += dur;
     }
-    console.log(`[Anthem] scheduled notes from ${startT.toFixed(3)} to ${t.toFixed(3)} (${(t-startT).toFixed(2)}s)`);
+    await new Promise(r => setTimeout(r, targetDurationSec * 1000));
+  }
 
-    return new Promise(resolve => setTimeout(resolve, targetDurationSec * 1000));
+  async play(flag, targetDurationSec = 5) {
+    console.log(`[Anthem] play(${flag}, ${targetDurationSec}s) — muted: ${audioFX.muted}`);
+    if (audioFX.muted) {
+      console.log("[Anthem] muted — silent wait");
+      await new Promise(r => setTimeout(r, targetDurationSec * 1000));
+      return;
+    }
+    const ready = await audioFX.ensureCtxReady();
+    if (!ready) {
+      console.warn("[Anthem] AudioContext not ready");
+      await new Promise(r => setTimeout(r, targetDurationSec * 1000));
+      return;
+    }
+    this.stopped = false;
+    this.activeOscs = [];
+    this.activeGains = [];
+    this.activeBufferSources = [];
+
+    // Try real MP3 first, fall back to synth
+    const playedMp3 = await this._tryMp3(flag, targetDurationSec);
+    if (!playedMp3 && !this.stopped) {
+      await this._playSynth(flag, targetDurationSec);
+    }
   }
 }
 const anthemPlayer = new AnthemPlayer();
@@ -1399,8 +1510,8 @@ const state = {
   shootout: { active: false, shooter: "Red", attempts: { Red: [], Blue: [] }, max: 5, finished: false },
   // Stadium banners
   banners: {
-    top:    { text: "PTE ASPIRE",            bg: "#1a1c23", fg: "#ffd700" },
-    bottom: { text: "FIFA WORLD CUP 2026 🇺🇸", bg: "#1a1c23", fg: "#00e676" },
+    top:    { text: "ROCHE TAVERO",            bg: "#1a1c23", fg: "#ff1744" },
+    bottom: { text: "SCHÖPFLI ROCHE BASEL",     bg: "#1a1c23", fg: "#00e676" },
   },
   // Sky banner — small plane towing a banner across the pitch
   plane: {
