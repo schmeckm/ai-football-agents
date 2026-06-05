@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MAKE Football Team - AI Match</title>
+<title>PTE Aspire - Football Soccer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&family=Orbitron:wght@600;700;900&display=swap" rel="stylesheet">
@@ -35,6 +35,12 @@
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: 0.5px; }
   h2 { font-size: 16px; margin-top: 18px; }
   h3 { font-size: 14px; margin-top: 14px; color: #c0c4d0; }
+  .subtitle {
+    font-size: 11.5px; color: #8a90a6; letter-spacing: 1.2px;
+    text-transform: uppercase; font-weight: 600;
+    margin: -8px 0 18px; padding-bottom: 10px;
+    border-bottom: 1px solid rgba(95, 100, 130, 0.15);
+  }
   #app { display: grid; grid-template-columns: minmax(380px, 38%) 1fr; gap: 18px; padding: 18px; max-width: 1800px; margin: 0 auto; }
   .panel { background: linear-gradient(135deg, rgba(18, 19, 26, 0.95) 0%, rgba(14, 15, 22, 0.95) 100%);
     border: 1px solid rgba(95, 100, 130, 0.18); border-radius: 14px; padding: 20px;
@@ -247,8 +253,8 @@
   <div class="modal-card halftime">
     <h1>⏸️ HALF TIME</h1>
     <div class="modal-result" id="halftime-result"></div>
-    <p class="modal-hint">Coaching break! Ball is back at the center spot. Adjust strategies for the second half, then resume.</p>
-    <button class="apply" id="ht-resume">▶️ Resume second half</button>
+    <p class="modal-hint">Halftime in the dressing room. Ball's back on the spot. Rethink the tactics, switch players around — then back out for the second half.</p>
+    <button class="apply" id="ht-resume">▶️ Out for the second half</button>
   </div>
 </div>
 
@@ -266,7 +272,7 @@
 <div id="heatmap-overlay" class="modal-overlay">
   <div class="modal-card heatmap">
     <h1>🔥 Match Heat Map</h1>
-    <p class="modal-hint">Player density during the match — bright spots show where each side spent most of the time.</p>
+    <p class="modal-hint">Where each player spent their match. Bright zones = home base.</p>
     <canvas id="heatmap-canvas" width="800" height="500"></canvas>
     <div>
       <button id="hm-close">Close</button>
@@ -274,17 +280,18 @@
   </div>
 </div>
 
-<div id="spectator-hint">Press <kbd>F</kbd> spectator · <kbd>M</kbd> mute · <kbd>Space</kbd> start</div>
+<div id="spectator-hint">Press <kbd>F</kbd> for fullscreen · <kbd>M</kbd> mute · <kbd>Space</kbd> kick off</div>
 
 <div id="app">
 
   <div class="panel">
-    <h1>⚽ MAKE Football Team</h1>
+    <h1>⚽ PTE Aspire - Football Soccer</h1>
+    <div class="subtitle">🇺🇸 FIFA World Cup 2026 · USA · Canada · Mexico</div>
 
     <details>
       <summary>🏆 Match setup</summary>
       <div>
-        <div class="caption">Team names, nations and duration. Apply starts a fresh match.</div>
+        <div class="caption">Name your sides, pick nations, set the clock. Apply, and we kick off.</div>
         <h3 style="margin-top:4px">Team A (left, attacks right goal)</h3>
         <div class="row cols-3">
           <div><label>Name</label><input type="text" id="su_name_red"></div>
@@ -317,19 +324,19 @@
 
     <button id="btn_start_stop" style="margin-bottom:10px">▶️ Start match</button>
 
-    <h2>Live prompt engineering</h2>
-    <div class="caption">4 roles per team: Striker, Midfielder, Defender, Goalkeeper. Empty = inactive.</div>
+    <h2>Coach your team</h2>
+    <div class="caption">Four roles per side: Striker, Midfielder, Defender, Goalkeeper. Leave a prompt empty and that player sits on the bench.</div>
 
     <div class="tabs">
-      <button class="tab active" data-team="Red" id="tab_red">🇨🇭 Make Red</button>
-      <button class="tab" data-team="Blue" id="tab_blue">🇩🇪 Make Blue</button>
+      <button class="tab active" data-team="Red" id="tab_red">🇨🇭 PTE Digital</button>
+      <button class="tab" data-team="Blue" id="tab_blue">🇩🇪 PTE - Aspire</button>
     </div>
 
     <div class="gen-box">
-      <h3>✨ AI Strategy Generator</h3>
-      <div class="caption" style="margin-bottom: 8px">Tell Llama what you want — it writes all 4 prompts for the <strong id="gen-team-label">active team</strong>.</div>
+      <h3>✨ Tactical Coach AI</h3>
+      <div class="caption" style="margin-bottom: 8px">Tell the coach what you want — it writes a full game plan for the <strong id="gen-team-label">active team</strong>.</div>
       <div class="gen-row">
-        <input type="text" id="gen_intent" placeholder="e.g. tiki-taka, parking the bus, gegenpressing...">
+        <input type="text" id="gen_intent" placeholder="e.g. tiki-taka, park the bus, gegenpressing, total football...">
         <button class="purple" id="btn_generate" style="width: auto; padding: 9px 16px;">✨ Generate</button>
       </div>
       <div id="gen_msg"></div>
@@ -343,9 +350,9 @@
     <details style="margin-top:10px">
       <summary>💾 Strategy library (<span id="strategy-count">0</span>)</summary>
       <div>
-        <div class="caption">Save the current team setup + all 8 prompts, then load it back with one click.</div>
+        <div class="caption">Save the whole package — team names, nations, all 8 tactics. Load it back next time with one click.</div>
         <div class="save-row">
-          <input type="text" id="save_strategy_name" placeholder="Name this setup (e.g. 'CH-Defensive v1')">
+          <input type="text" id="save_strategy_name" placeholder="Name this setup (e.g. 'Swiss Counter v1')">
           <button class="apply" id="btn_save_strategy">💾 Save</button>
         </div>
         <div id="strategy-list"></div>
@@ -378,7 +385,7 @@
     <h1>Live simulation</h1>
     <div id="pitch-header">
       <span>⏱️ <span id="time-text">90.0</span>s</span>
-      <span id="score-text">Make Red: 0  |  Make Blue: 0</span>
+      <span id="score-text">PTE Digital: 0  |  PTE - Aspire: 0</span>
       <span style="display:flex; gap: 8px; align-items: center;">
         <button id="btn-mute" title="Toggle sound (M)">🔊</button>
         <span id="live-tag">● LIVE</span>
@@ -388,7 +395,7 @@
 
     <div id="stats-bar">
       <div class="stat-side red">
-        <div class="stat-team-name" id="stat-name-red" style="color:#ff1744">🇨🇭 Make Red</div>
+        <div class="stat-team-name" id="stat-name-red" style="color:#ff1744">🇨🇭 PTE Digital</div>
         <div class="stat-detail"><span id="stat-kicks-red">0</span> kicks · <span id="stat-shots-red">0</span> shots</div>
       </div>
       <div id="poss-bar-wrap">
@@ -399,7 +406,7 @@
         </div>
       </div>
       <div class="stat-side blue">
-        <div class="stat-team-name" id="stat-name-blue" style="color:#00b0ff">Make Blue 🇩🇪</div>
+        <div class="stat-team-name" id="stat-name-blue" style="color:#00b0ff">PTE - Aspire 🇩🇪</div>
         <div class="stat-detail"><span id="stat-kicks-blue">0</span> kicks · <span id="stat-shots-blue">0</span> shots</div>
       </div>
     </div>
@@ -479,28 +486,28 @@ const INITIAL_POS = {
 
 const STRATEGY_PRESETS = {
   Striker: {
-    "🔥 Aggressive":  "Always run toward the ball at maximum speed. Be the first to reach it. Kick aggressively toward the opponent goal whenever you touch the ball.",
-    "🎯 Sniper":      "Stay near the opponent goal area. Wait for the ball to come close, then strike hard. Do not chase deep into your own half.",
-    "💨 Counter":     "Wait in your own half. As soon as your team has the ball or it is loose in midfield, sprint forward aggressively to attack.",
-    "🤝 Team Player": "Run toward the ball but do not crowd your midfielder. Position yourself ahead of the ball and finish when possible.",
+    "🔥 Aggressive":  "First to every ball. No hesitation, no waiting. The moment you get a touch, hit the target — hard.",
+    "🎯 Sniper":      "Live in the opponent's box. Let the ball come to you, then finish clinical. You don't track back, you wait to strike.",
+    "💨 Counter":     "Hold back in your own half. The moment possession turns over, explode forward. Speed is everything.",
+    "🤝 Team Player": "Read your midfielder. Give them space, then peel into the box. When the cross comes, you're already there.",
   },
   Midfielder: {
-    "⚡ Press":      "Always run toward the ball, no matter where it is. Pressure the opponent constantly. Help both attack and defense.",
-    "🎩 Playmaker":  "Stay in the center of the field. Move slowly toward the ball when it is close. Control possession and feed the striker.",
-    "🛡️ Holding":    "Stay slightly behind your striker. Protect the defenders. Only push forward when your team controls the ball.",
-    "🏃 Box-to-Box": "Sprint between both halves of the field. Help score in attack and help block in defense. Never stop moving.",
+    "⚡ Press":       "Chase every loose ball, anywhere on the pitch. Pressure never stops. Cover attack and defence — you're the engine.",
+    "🎩 Playmaker":  "Anchor the centre. Read the game, slow it down when needed. Pick your moment, then thread the killer pass.",
+    "🛡️ Holding":    "Sit just ahead of the back line. Break up plays before they start. Only push forward when the ball is truly yours.",
+    "🏃 Box-to-Box": "Cover every blade of grass. Score, defend, recover, repeat. You are the lungs of this team.",
   },
   Defender: {
-    "🧱 Wall":       "Stay close to your own goal. Block any attacker that approaches. When you reach the ball, kick it away from your goal.",
-    "🎯 Sweeper":    "Move toward the ball whenever it enters your half. Otherwise stay positioned between the ball and your goal.",
-    "💪 High Line":  "Push high up the field. Press opponents in their own half. Take risks to win the ball back early.",
-    "👁️ Anchor":     "Stay deep near your own goal. Only move toward the ball when it is very close to your goal. Otherwise hold position.",
+    "🧱 Wall":       "Glued to your goal. Whatever comes at you, clear it long. Take no chances, take no gambles.",
+    "🎯 Sweeper":    "Hold the line. Step out only when danger enters your half. Read the angles, recover smart.",
+    "💪 High Line":  "Push up aggressively. Squeeze the pitch, suffocate the opponent. Trust your pace to recover.",
+    "👁️ Anchor":     "Park near your goal. Move only when the threat is real. Patience wins championships.",
   },
   Goalkeeper: {
-    "🧤 Line Goalie":    "Stay close to your goal line. Mirror the ball's vertical position. Never venture far from the goal area.",
-    "🏃 Sweeper Keeper": "Stay near your goal but come out to intercept loose balls when the opponent striker gets close.",
-    "🦅 Aggressive":     "Come out of your goal to challenge attackers when they enter your penalty area. Cover the goal but be brave.",
-    "🛡️ Static":         "Stay exactly on the goal line at center y. Only move slightly up or down to block direct shots.",
+    "🧤 Line Goalie":    "Stay on your line. Mirror the ball with your body. Trust your defenders, hold your post.",
+    "🏃 Sweeper Keeper": "Be the eleventh outfielder. Step out for through balls, but always recover fast.",
+    "🦅 Aggressive":     "Come and claim. Charge attackers the moment they enter your box. Be loud, be big.",
+    "🛡️ Static":         "Centre of the goal, feet planted. React don't dive blind — wait for the shot, then explode.",
   },
 };
 
@@ -664,8 +671,8 @@ const state = {
   autoplay: false,
   ball: { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 },
   ballKickCooldown: 0, ballTrail: [],
-  teamRed:  { name: "Make Red",  nation: "Switzerland", color: "#ff1744" },
-  teamBlue: { name: "Make Blue", nation: "Germany",     color: "#00b0ff" },
+  teamRed:  { name: "PTE Digital",  nation: "Switzerland", color: "#ff1744" },
+  teamBlue: { name: "PTE - Aspire", nation: "Germany",     color: "#00b0ff" },
   players: buildPlayers(),
   lastLLMCall: 0, pendingLLM: false, lastLLMDebug: "{}", apiError: null,
   activeTab: "Red",
@@ -757,7 +764,7 @@ function applySetup() {
 
   renderTabs(); renderPrompts(); renderScore(); renderStartStop();
   renderApiError(); renderCommentaries(); renderGenTeamLabel(); renderStats();
-  document.getElementById("setup_msg").innerHTML = '<div class="success">Match setup applied. Press Start to kickoff.</div>';
+  document.getElementById("setup_msg").innerHTML = '<div class="success">Teams locked in. Press Start when you&rsquo;re ready to kick off.</div>';
   setTimeout(() => { document.getElementById("setup_msg").innerHTML = ""; }, 3500);
 }
 
@@ -787,7 +794,7 @@ function renderHistory() {
   const h = loadHistory();
   document.getElementById("history-count").textContent = h.length;
   const target = document.getElementById("history-table");
-  if (h.length === 0) { target.innerHTML = '<div class="caption">No matches yet. Play a full match to start the leaderboard.</div>'; return; }
+  if (h.length === 0) { target.innerHTML = '<div class="caption">No matches played yet. Finish a full match and your team enters the standings.</div>'; return; }
   const stats = {};
   for (const m of h) {
     for (const [side, opp] of [[m.teamRed, m.teamBlue], [m.teamBlue, m.teamRed]]) {
@@ -862,7 +869,7 @@ function loadStrategyByName(name) {
   loadSetupFromState();
   renderTabs(); renderPrompts(); renderScore(); renderStartStop();
   renderCommentaries(); renderGenTeamLabel(); renderStats();
-  document.getElementById("setup_msg").innerHTML = `<div class="success">Loaded strategy "${escapeHTML(name)}".</div>`;
+  document.getElementById("setup_msg").innerHTML = `<div class="success">Loaded &ldquo;${escapeHTML(name)}&rdquo;. Ready when you are.</div>`;
   setTimeout(() => { document.getElementById("setup_msg").innerHTML = ""; }, 3000);
 }
 
@@ -904,7 +911,7 @@ function renderStrategyLibrary() {
   document.getElementById("strategy-count").textContent = names.length;
   const list = document.getElementById("strategy-list");
   if (names.length === 0) {
-    list.innerHTML = '<div class="caption">No saved strategies yet. Configure your teams above, name your setup, then click Save.</div>';
+    list.innerHTML = '<div class="caption">Nothing saved yet. Set up your teams above, give the setup a name, hit Save.</div>';
     return;
   }
   list.innerHTML = names.map(name => {
@@ -1049,7 +1056,7 @@ async function generateStrategy() {
     if (data.defender)   state.players[prefix + "defender"].prompt   = data.defender;
     if (data.goalkeeper) state.players[prefix + "goalkeeper"].prompt = data.goalkeeper;
     renderPrompts();
-    msg.innerHTML = `<div class="success" style="margin-top: 8px;">✨ Generated 4 prompts for ${escapeHTML(teamName)}.</div>`;
+    msg.innerHTML = `<div class="success" style="margin-top: 8px;">✨ Tactics drawn up for ${escapeHTML(teamName)}.</div>`;
     setTimeout(() => { msg.innerHTML = ""; }, 4000);
     intentInput.value = "";
   } catch (e) {
@@ -1093,8 +1100,8 @@ function pushCommentary(text) {
 
 function renderCommentaries() {
   const list = document.getElementById("commentary-list");
-  if (!state.commentaryEnabled) { list.innerHTML = '<div class="commentary-empty">Enable AI Commentator to hear live match commentary.</div>'; return; }
-  if (state.commentaries.length === 0) { list.innerHTML = '<div class="commentary-empty">Commentary will appear when the match starts...</div>'; return; }
+  if (!state.commentaryEnabled) { list.innerHTML = '<div class="commentary-empty">Flip the commentator on for live calls from the booth.</div>'; return; }
+  if (state.commentaries.length === 0) { list.innerHTML = '<div class="commentary-empty">Standing by for kickoff…</div>'; return; }
   list.innerHTML = state.commentaries.slice(0, 6).map(c =>
     `<div class="commentary-item"><span class="commentary-time">${c.time.toFixed(0)}s</span>${escapeHTML(c.text)}</div>`
   ).join("");
@@ -1349,7 +1356,7 @@ function renderPitch() {
   ctx.fillRect(FIELD_W - 10, GOAL_MIN, 10, GOAL_MAX - GOAL_MIN);
   ctx.fillStyle = "rgba(255,255,255,0.11)";
   ctx.font = "bold 30px 'Orbitron', 'Impact', sans-serif"; ctx.textAlign = "center";
-  ctx.fillText("MAKE FOOTBALL TEAM", FIELD_W/2, FIELD_H/2 + 10);
+  ctx.fillText("PTE ASPIRE FOOTBALL", FIELD_W/2, FIELD_H/2 + 10);
 
   let ballX, ballY, ballTrail, getPlayer;
   if (state.replay.active && state.replay.frames.length > 0) {

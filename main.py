@@ -1,5 +1,5 @@
 """
-MAKE Football Team - FastAPI Backend
+PTE Aspire Football - FastAPI Backend
 Endpoints:
   POST /api/move               -> game move decisions
   POST /api/commentary         -> live match commentary
@@ -28,7 +28,7 @@ if not NVIDIA_API_KEY:
 NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 MODEL_ID = os.environ.get("MODEL_ID", "meta/llama-3.1-8b-instruct")
 
-app = FastAPI(title="MAKE Football Team")
+app = FastAPI(title="PTE Aspire Football")
 
 app.add_middleware(
     CORSMiddleware,
@@ -65,8 +65,8 @@ class Player(BaseModel):
 class MoveRequest(BaseModel):
     ball: Dict[str, float]
     players: Dict[str, Player]
-    team_red_name: str = "Make Red"
-    team_blue_name: str = "Make Blue"
+    team_red_name: str = "PTE Digital"
+    team_blue_name: str = "PTE - Aspire"
     field_w: int = 800
     field_h: int = 500
 
@@ -214,9 +214,10 @@ async def get_commentary(req: CommentaryRequest):
     }.get(req.event, req.event)
 
     system = (
-        "You are an excited football match commentator on live TV. "
-        "Reply with ONE short, energetic sentence — maximum 14 words. "
-        "No quotes, no asterisks, no markdown formatting. Just the sentence."
+        "You are a live football TV commentator at full energy. "
+        "Reply with ONE short, punchy sentence — maximum 14 words. "
+        "Sound like Peter Drury or Martin Tyler in their best moments. "
+        "No quotes, no asterisks, no markdown. Just the line."
     )
     user = (
         f"Score: {req.team_red_name} {req.score_red} - {req.score_blue} {req.team_blue_name}. "
@@ -275,14 +276,15 @@ async def generate_strategy(req: StrategyGenRequest):
         return StrategyGenResponse(debug="empty intent")
 
     system = (
-        "You are a football tactics coach writing instructions for AI-controlled players. "
-        "Given a team name and a tactical intent, write FOUR separate prompts — one each for "
-        "the STRIKER, MIDFIELDER, DEFENDER, and GOALKEEPER. Each prompt must:\n"
-        "  - be 2 to 4 sentences\n"
-        "  - describe concrete movement rules and decision triggers\n"
-        "  - reflect the tactical intent\n"
-        "  - be written in English, plain prose, no markdown\n"
-        "The GOALKEEPER stays in the goal area; describe how it tracks the ball.\n\n"
+        "You are an experienced football tactician writing match-day instructions for four AI players. "
+        "Given a team name and a tactical vision, write FOUR distinct briefings — one each for "
+        "the STRIKER, MIDFIELDER, DEFENDER, and GOALKEEPER. Each briefing must:\n"
+        "  - read like a coach talking to a player, not a manual\n"
+        "  - be 2 to 4 sentences, punchy and direct\n"
+        "  - give concrete movement and decision rules\n"
+        "  - reflect the tactical vision\n"
+        "  - be plain English prose, no markdown, no bullets\n"
+        "The GOALKEEPER stays in the goal area; tell them how to track the ball.\n\n"
         "Respond with VALID JSON ONLY, exactly this shape, nothing else:\n"
         '{"striker":"...","midfielder":"...","defender":"...","goalkeeper":"..."}'
     )
