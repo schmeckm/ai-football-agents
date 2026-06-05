@@ -217,14 +217,18 @@
   /* Crowd stripes — stadium spectators above and below the pitch */
   .crowd-strip {
     width: 100%;
-    height: 30px;
+    height: 60px;
     display: block;
-    border-radius: 4px;
-    margin: 4px 0;
+    border-radius: 5px;
+    margin: 5px 0;
+    border: 1px solid rgba(95, 100, 130, 0.25);
     box-shadow:
-      inset 0 2px 6px rgba(0, 0, 0, 0.6),
-      inset 0 -2px 6px rgba(0, 0, 0, 0.4);
-    background: #0a0e18;
+      inset 0 2px 4px rgba(0, 0, 0, 0.4),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.2),
+      0 2px 6px rgba(0, 0, 0, 0.3);
+    background: #1a2030;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
   }
 
   /* Live Match Stats */
@@ -527,11 +531,11 @@
         <span id="live-tag">● LIVE</span>
       </span>
     </div>
-    <canvas id="crowd-top" class="crowd-strip" width="800" height="30"></canvas>
+    <canvas id="crowd-top" class="crowd-strip" width="800" height="60"></canvas>
     <div id="banner-top" class="ad-banner"><div class="banner-marquee"><span class="banner-text"></span><span class="banner-text"></span></div></div>
     <canvas id="pitch" width="800" height="500"></canvas>
     <div id="banner-bottom" class="ad-banner"><div class="banner-marquee"><span class="banner-text"></span><span class="banner-text"></span></div></div>
-    <canvas id="crowd-bottom" class="crowd-strip" width="800" height="30"></canvas>
+    <canvas id="crowd-bottom" class="crowd-strip" width="800" height="60"></canvas>
 
     <div id="stats-bar">
       <div class="stat-side red">
@@ -1177,51 +1181,78 @@ function applyBannersToUI() {
   bot.querySelectorAll(".banner-text").forEach(el => el.textContent = state.banners.bottom.text);
 }
 
-// Stadium crowd — render once into both crowd canvases
+// Stadium crowd — large, visible heads with deterministic pattern
 function renderCrowd() {
-  const palette = [
-    "#c79a4f", "#4a3a2a", "#d4a574", "#7a5a3a",
-    "#e0c090", "#a07a5a", "#c4a880", "#5d4530",
-    "#3a2818", "#9a7448", "#6d4f30", "#bf8e5e",
-    // accent fan colours (less frequent, mixed in)
-    "#ff5a4d", "#3a82bd", "#ffd700", "#00e676", "#b388ff", "#fff",
+  const skinTones = [
+    "#e8c9a0", "#d9a96c", "#c79a4f", "#b88c6b", "#a07a5a", "#9a7448",
+    "#7a5a3a", "#5d4530", "#4a3a2a", "#3d2818", "#e0b888",
+  ];
+  const hairOrShirt = [
+    "#1a1a1a", "#2c2c2c", "#3d2818", "#5d4530", "#7a5a3a",   // hair tones
+    "#ff1744", "#ff5a4d", "#3a82bd", "#4aaaff", "#00b0ff",   // fan shirts
+    "#ffd700", "#ffea4f", "#00e676", "#b388ff", "#ffffff",
+    "#ff9100", "#ff3344",
   ];
   function paint(canvas, seed) {
+    // Match buffer to actual display size for crisp rendering
+    const cssW = Math.max(400, Math.floor(canvas.clientWidth || 800));
+    const cssH = Math.max(40,  Math.floor(canvas.clientHeight || 60));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width  = Math.floor(cssW * dpr);
+    canvas.height = Math.floor(cssH * dpr);
     const c = canvas.getContext("2d");
-    const W = canvas.width, H = canvas.height;
-    // Dark stand background gradient
-    const grad = c.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, "#0a0e18");
-    grad.addColorStop(0.5, "#161c2c");
-    grad.addColorStop(1, "#0a0e18");
+    c.scale(dpr, dpr);
+
+    // Stand background — darker at top/bottom, lighter middle
+    const grad = c.createLinearGradient(0, 0, 0, cssH);
+    grad.addColorStop(0,    "#0e1422");
+    grad.addColorStop(0.45, "#2a3148");
+    grad.addColorStop(1,    "#0e1422");
     c.fillStyle = grad;
-    c.fillRect(0, 0, W, H);
-    // Many small heads, deterministic per (x, row) + seed
-    const rowSpacing = 4.5;
-    const colSpacing = 4.5;
-    for (let row = 0; row < Math.floor(H / rowSpacing) - 1; row++) {
-      const y = 3 + row * rowSpacing;
-      for (let x = 3; x < W; x += colSpacing) {
+    c.fillRect(0, 0, cssW, cssH);
+
+    // Generate heads — many rows, brick-offset pattern
+    const headRadius = 2.6;
+    const rowSpacing = 6;
+    const colSpacing = 5.5;
+    const rows = Math.floor((cssH - 4) / rowSpacing);
+
+    for (let row = 0; row < rows; row++) {
+      const y = 4 + row * rowSpacing;
+      const rowOffset = (row % 2) * (colSpacing / 2);
+
+      for (let x = 4 + rowOffset; x < cssW; x += colSpacing) {
         const h = ((x * 73 + row * 19 + seed) | 0) >>> 0;
-        const colorIdx = h % palette.length;
-        const sizeJitter = ((h >> 4) % 3) * 0.18;
-        const xJitter = (((h >> 8) % 3) - 1) * 0.6;
+        const skin = skinTones[h % skinTones.length];
+        const shirt = hairOrShirt[(h >> 5) % hairOrShirt.length];
+        const xJitter = (((h >> 8) % 5) - 2) * 0.5;
         const yJitter = (((h >> 12) % 3) - 1) * 0.4;
-        c.fillStyle = palette[colorIdx];
+        const sizeJitter = ((h >> 16) % 5) * 0.15;
+        const radius = headRadius + sizeJitter;
+
+        // Shirt/shoulders (a bit below head)
+        c.fillStyle = shirt;
         c.beginPath();
-        c.arc(x + xJitter, y + yJitter, 1.4 + sizeJitter, 0, Math.PI * 2);
+        c.arc(x + xJitter, y + yJitter + radius * 1.1, radius * 1.05, 0, Math.PI * 2);
+        c.fill();
+
+        // Head (skin tone, on top)
+        c.fillStyle = skin;
+        c.beginPath();
+        c.arc(x + xJitter, y + yJitter, radius, 0, Math.PI * 2);
         c.fill();
       }
     }
-    // Subtle overhead light/shadow band
-    const overlay = c.createLinearGradient(0, 0, 0, H);
-    overlay.addColorStop(0, "rgba(0, 0, 0, 0.0)");
-    overlay.addColorStop(0.5, "rgba(0, 0, 0, 0.0)");
-    overlay.addColorStop(1, "rgba(0, 0, 0, 0.35)");
+
+    // Light haze across stand
+    const overlay = c.createLinearGradient(0, 0, 0, cssH);
+    overlay.addColorStop(0,    "rgba(255, 255, 255, 0.05)");
+    overlay.addColorStop(0.5,  "rgba(255, 255, 255, 0.00)");
+    overlay.addColorStop(1,    "rgba(0, 0, 0, 0.30)");
     c.fillStyle = overlay;
-    c.fillRect(0, 0, W, H);
+    c.fillRect(0, 0, cssW, cssH);
   }
-  paint(document.getElementById("crowd-top"), 12345);
+  paint(document.getElementById("crowd-top"),    12345);
   paint(document.getElementById("crowd-bottom"), 67890);
 }
 
@@ -1737,17 +1768,51 @@ function physicsStep(dt) {
     if (!isActive(p)) continue;
     const dyn = (p.team === "Red" ? state.teamRed.dynamics : state.teamBlue.dynamics) ?? 1.0;
     let mdx = p.dx, mdy = p.dy;
-    if (mdx === 0 && mdy === 0) {
-      const bDx = state.ball.x - p.x, bDy = state.ball.y - p.y;
-      const bDist = Math.hypot(bDx, bDy);
-      if (bDist > 1) {
-        let speed = 0;
-        const ownHalf = (p.team === "Red" && state.ball.x < FIELD_W / 2) || (p.team === "Blue" && state.ball.x > FIELD_W / 2);
-        if      (p.role === "Striker")             speed = 5;
-        else if (p.role === "Midfielder")          speed = 4;
-        else if (p.role === "Defender" && ownHalf) speed = 4;
-        else if (p.role === "Goalkeeper")          speed = 3;
-        if (speed > 0) { mdx = (bDx / bDist) * speed; mdy = (bDy / bDist) * speed; }
+
+    // Distance to ball and current LLM movement strength
+    const bDx = state.ball.x - p.x, bDy = state.ball.y - p.y;
+    const bDist = Math.hypot(bDx, bDy);
+    const movement = Math.abs(mdx) + Math.abs(mdy);
+
+    // Stuck detector — if player barely moved in the last 2.5s, force a chase
+    if (!p._lastPos) p._lastPos = { x: p.x, y: p.y, t: 0 };
+    p._lastPos.t += dt;
+    if (p._lastPos.t > 2.5) {
+      const moved = Math.hypot(p.x - p._lastPos.x, p.y - p._lastPos.y);
+      p._stuck = moved < 30;   // moved less than 30px in 2.5s → stuck
+      p._lastPos = { x: p.x, y: p.y, t: 0 };
+    }
+
+    // Velocity-to-ball dot product (-1 away from ball, +1 toward ball)
+    const movingAwayFromBall =
+      movement > 0.5 && bDist > 60 &&
+      ((mdx * bDx + mdy * bDy) / (movement * bDist + 1e-6)) < -0.2;
+
+    // Triggers — much more aggressive than before
+    const llmIdle      = movement < 2.5;                              // was 1.5
+    const ownHalf      = (p.team === "Red" && state.ball.x < FIELD_W / 2) || (p.team === "Blue" && state.ball.x > FIELD_W / 2);
+    const farFromBall  = bDist > 140;                                  // was 220
+    const isAttacker   = p.role === "Striker" || p.role === "Midfielder";
+    const shouldChase  =
+         (llmIdle && bDist > 8)
+      || (farFromBall && isAttacker)
+      || (p._stuck && p.role !== "Goalkeeper")
+      || (movingAwayFromBall && isAttacker && bDist > 100);
+
+    if (shouldChase) {
+      let speed = 0;
+      if      (p.role === "Striker")             speed = 6.0;
+      else if (p.role === "Midfielder")          speed = 5.5;
+      else if (p.role === "Defender" && ownHalf) speed = 5.0;
+      else if (p.role === "Defender")            speed = 3.5;   // was 2.0 — chase out of own half too
+      else if (p.role === "Goalkeeper")          speed = 0;     // GK only moves via LLM
+      if (speed > 0 && bDist > 1) {
+        // Blend strength depends on situation
+        let blend = 1.0;
+        if (movingAwayFromBall) blend = 0.85;
+        else if (!llmIdle && !p._stuck) blend = 0.6;
+        mdx = mdx * (1 - blend) + (bDx / bDist) * speed * blend;
+        mdy = mdy * (1 - blend) + (bDy / bDist) * speed * blend;
       }
     }
 
@@ -2634,7 +2699,15 @@ document.addEventListener("keydown", (e) => {
 populateNationDropdowns();
 loadSetupFromState();
 initQRCode();
-renderCrowd();
+requestAnimationFrame(() => {
+  renderCrowd();
+  // Re-render on window resize so dots stay crisp
+  let crowdResizeTimer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(crowdResizeTimer);
+    crowdResizeTimer = setTimeout(renderCrowd, 200);
+  });
+});
 renderTabs();
 renderPrompts();
 renderScore();
