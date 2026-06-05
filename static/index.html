@@ -294,6 +294,13 @@
   .modal-card.halftime { border: 1px solid rgba(179, 136, 255, 0.5); box-shadow: 0 0 60px rgba(179, 136, 255, 0.3); }
   .modal-card.heatmap { border: 1px solid rgba(255, 145, 0, 0.5); box-shadow: 0 0 60px rgba(255, 145, 0, 0.3); padding: 30px; max-width: 900px; }
   .modal-card.penalty { border: 1px solid rgba(179, 136, 255, 0.5); box-shadow: 0 0 60px rgba(179, 136, 255, 0.3); padding: 30px 40px; max-width: 540px; }
+  .modal-card.ceremony { border: 1px solid rgba(255, 215, 0, 0.6); box-shadow: 0 0 80px rgba(255, 215, 0, 0.35); padding: 40px 50px; max-width: 560px; }
+  #ceremony-flag { font-size: 120px; line-height: 1; margin: 0 0 12px; animation: ceremonyPulse 2.5s ease-in-out infinite; filter: drop-shadow(0 0 24px rgba(255,215,0,0.45)); }
+  #ceremony-team-name { font-family: 'Orbitron', monospace; font-size: 36px; margin: 0 0 8px; letter-spacing: 2px; text-shadow: 0 0 18px currentColor; }
+  #ceremony-status { font-family: 'Orbitron', monospace; font-size: 16px; color: #ffd700; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 22px; }
+  #ceremony-progress { width: 100%; max-width: 400px; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; margin: 0 auto 22px; overflow: hidden; }
+  #ceremony-bar { height: 100%; background: linear-gradient(90deg, #ffd700 0%, #ffea4f 100%); width: 0%; transition: width 0.1s linear; box-shadow: 0 0 12px rgba(255,215,0,0.6); }
+  @keyframes ceremonyPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
   #penalty-board { font-family: 'Orbitron', monospace; font-size: 20px; margin: 20px 0; letter-spacing: 1px; }
   #penalty-board .pen-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
   #penalty-board .pen-row .pen-name { font-weight: 800; font-size: 16px; }
@@ -342,6 +349,16 @@
 <body>
 
 <div id="goal-flash"><div class="goal-text">GOAL!</div><div class="goal-sub" id="goal-sub-text"></div></div>
+
+<div id="ceremony-overlay" class="modal-overlay">
+  <div class="modal-card ceremony">
+    <div id="ceremony-flag">🇨🇭</div>
+    <h1 id="ceremony-team-name">Team Name</h1>
+    <div id="ceremony-status">🎵 National Anthem</div>
+    <div id="ceremony-progress"><div id="ceremony-bar"></div></div>
+    <button id="ceremony-skip">⏭ Skip Ceremony</button>
+  </div>
+</div>
 
 <div id="halftime-overlay" class="modal-overlay">
   <div class="modal-card halftime">
@@ -627,16 +644,30 @@ const NATIONS = {
   "USA":{flag:"🇺🇸",color:"#3c3b6e"},
 };
 
+// Formation positions — players line up on a single horizontal line at kickoff.
+// Red defends left goal (x≈0), attacks right. Blue defends right goal (x≈800), attacks left.
 const INITIAL_POS = {
-  red_striker:    { team: "Red",  role: "Striker",    x: 320, y: 200 },
-  red_midfielder: { team: "Red",  role: "Midfielder", x: 200, y: 300 },
-  red_defender:   { team: "Red",  role: "Defender",   x: 100, y: 250 },
-  red_goalkeeper: { team: "Red",  role: "Goalkeeper", x: 50,  y: 250 },
-  blue_striker:   { team: "Blue", role: "Striker",    x: 480, y: 300 },
-  blue_midfielder:{ team: "Blue", role: "Midfielder", x: 600, y: 200 },
-  blue_defender:  { team: "Blue", role: "Defender",   x: 700, y: 250 },
-  blue_goalkeeper:{ team: "Blue", role: "Goalkeeper", x: 750, y: 250 },
+  red_goalkeeper:  { team: "Red",  role: "Goalkeeper", x: 60,  y: 250 },
+  red_defender:    { team: "Red",  role: "Defender",   x: 170, y: 250 },
+  red_midfielder:  { team: "Red",  role: "Midfielder", x: 280, y: 250 },
+  red_striker:     { team: "Red",  role: "Striker",    x: 370, y: 250 },
+  blue_striker:    { team: "Blue", role: "Striker",    x: 430, y: 250 },
+  blue_midfielder: { team: "Blue", role: "Midfielder", x: 520, y: 250 },
+  blue_defender:   { team: "Blue", role: "Defender",   x: 630, y: 250 },
+  blue_goalkeeper: { team: "Blue", role: "Goalkeeper", x: 740, y: 250 },
 };
+
+// Helper — snap all players into formation and clear movement.
+// Used at match start, halftime, and after a goal celebration.
+function resetPlayersToFormation() {
+  for (const [name, p] of Object.entries(state.players)) {
+    const base = INITIAL_POS[name];
+    if (base) { p.x = base.x; p.y = base.y; }
+    p.dx = 0; p.dy = 0; p.kick = false;
+    p._stuck = false; p._lastPos = null;
+  }
+  state.lastLLMCall = 0;   // force LLM to re-decide once play resumes
+}
 
 const STRATEGY_PRESETS = {
   Striker: {
@@ -754,6 +785,180 @@ class AudioFX {
   }
 }
 const audioFX = new AudioFX();
+
+// =====================================================================
+// ANTHEM PLAYER — short synthesized national anthem snippets via Web Audio
+// =====================================================================
+const NOTE = {
+  C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00, B4: 493.88,
+  C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880.00, B5: 987.77, C6: 1046.50,
+  Bb4: 466.16, Eb4: 311.13, F4s: 369.99, C5s: 554.37, D5s: 622.25, G4s: 415.30, A4s: 466.16,
+};
+
+// First few notes of each anthem. Tries to be recognizable in 5 seconds.
+// For unknown nations, falls back to "default" (generic fanfare).
+const ANTHEMS = {
+  // Swiss Psalm — Trittst im Morgenrot daher
+  "🇨🇭": [
+    {f:NOTE.F4,d:0.5},{f:NOTE.F4,d:0.4},{f:NOTE.G4,d:0.4},{f:NOTE.F4,d:0.4},
+    {f:NOTE.Bb4,d:0.8},{f:NOTE.A4,d:0.4},{f:NOTE.G4,d:0.4},{f:NOTE.F4,d:0.8},
+    {f:NOTE.A4,d:0.5},{f:NOTE.Bb4,d:0.5},{f:NOTE.C5,d:0.8},
+  ],
+  // Deutschlandlied — Einigkeit und Recht und Freiheit
+  "🇩🇪": [
+    {f:NOTE.G4,d:0.4},{f:NOTE.A4,d:0.4},{f:NOTE.G4,d:0.3},{f:NOTE.F4,d:0.3},
+    {f:NOTE.G4,d:0.4},{f:NOTE.A4,d:0.4},{f:NOTE.G4,d:0.6},
+    {f:NOTE.B4,d:0.4},{f:NOTE.C5,d:0.4},{f:NOTE.B4,d:0.4},{f:NOTE.A4,d:0.4},
+    {f:NOTE.B4,d:0.4},{f:NOTE.C5,d:0.4},{f:NOTE.D5,d:0.8},
+  ],
+  // Star-Spangled Banner — Oh say can you see
+  "🇺🇸": [
+    {f:NOTE.C5,d:0.6},{f:NOTE.A4,d:0.4},{f:NOTE.F4,d:0.5},{f:NOTE.A4,d:0.4},
+    {f:NOTE.C5,d:0.5},{f:NOTE.F5,d:1.0},
+    {f:NOTE.E5,d:0.4},{f:NOTE.D5,d:0.4},{f:NOTE.C5,d:0.6},{f:NOTE.A4,d:0.5},{f:NOTE.F4,d:0.7},
+  ],
+  // O Canada
+  "🇨🇦": [
+    {f:NOTE.C5,d:0.6},{f:NOTE.G4,d:1.0},{f:NOTE.G4,d:0.4},{f:NOTE.A4,d:0.4},
+    {f:NOTE.Bb4,d:0.5},{f:NOTE.C5,d:0.5},{f:NOTE.D5,d:0.5},
+    {f:NOTE.Bb4,d:0.8},{f:NOTE.A4,d:0.6},{f:NOTE.G4,d:1.0},
+  ],
+  // Marseillaise — Allons enfants
+  "🇫🇷": [
+    {f:NOTE.D4,d:0.25},{f:NOTE.D4,d:0.25},{f:NOTE.D4,d:0.4},
+    {f:NOTE.G4,d:0.8},{f:NOTE.G4,d:0.3},
+    {f:NOTE.A4,d:0.3},{f:NOTE.A4,d:0.3},{f:NOTE.D5,d:0.8},
+    {f:NOTE.D5,d:0.3},{f:NOTE.B4,d:0.3},{f:NOTE.G4,d:0.5},
+    {f:NOTE.B4,d:0.4},{f:NOTE.A4,d:0.4},{f:NOTE.G4,d:0.5},
+  ],
+  // God Save the King — UK
+  "🇬🇧": [
+    {f:NOTE.G4,d:0.6},{f:NOTE.G4,d:0.6},{f:NOTE.A4,d:0.6},
+    {f:NOTE.F4,d:0.4},{f:NOTE.G4,d:0.4},{f:NOTE.A4,d:0.4},
+    {f:NOTE.Bb4,d:1.0},{f:NOTE.Bb4,d:0.6},{f:NOTE.C5,d:0.6},
+  ],
+  // Italy — Fratelli d'Italia
+  "🇮🇹": [
+    {f:NOTE.D5,d:0.4},{f:NOTE.C5,d:0.2},{f:NOTE.Bb4,d:0.2},
+    {f:NOTE.A4,d:0.4},{f:NOTE.G4,d:0.6},
+    {f:NOTE.G4,d:0.3},{f:NOTE.A4,d:0.3},{f:NOTE.Bb4,d:0.5},
+    {f:NOTE.A4,d:0.3},{f:NOTE.G4,d:0.6},{f:NOTE.F4,d:0.6},{f:NOTE.G4,d:0.6},
+  ],
+  // Spain — Marcha Real
+  "🇪🇸": [
+    {f:NOTE.C5,d:0.5},{f:NOTE.C5,d:0.3},{f:NOTE.E5,d:0.3},{f:NOTE.G5,d:0.5},
+    {f:NOTE.G5,d:0.3},{f:NOTE.A5,d:0.3},{f:NOTE.G5,d:0.5},{f:NOTE.E5,d:0.5},
+    {f:NOTE.G5,d:0.5},{f:NOTE.E5,d:0.5},{f:NOTE.C5,d:0.8},
+  ],
+  // Brazil — Hino Nacional
+  "🇧🇷": [
+    {f:NOTE.G4,d:0.5},{f:NOTE.B4,d:0.5},{f:NOTE.D5,d:0.5},{f:NOTE.G5,d:0.6},
+    {f:NOTE.D5,d:0.3},{f:NOTE.B4,d:0.4},{f:NOTE.G4,d:0.6},
+    {f:NOTE.A4,d:0.4},{f:NOTE.B4,d:0.4},{f:NOTE.C5,d:0.5},{f:NOTE.D5,d:0.8},
+  ],
+  // Argentina — Himno Nacional
+  "🇦🇷": [
+    {f:NOTE.D5,d:0.3},{f:NOTE.D5,d:0.3},{f:NOTE.D5,d:0.3},{f:NOTE.D5,d:0.3},
+    {f:NOTE.E5,d:0.3},{f:NOTE.D5,d:0.3},{f:NOTE.C5,d:0.5},
+    {f:NOTE.A4,d:0.4},{f:NOTE.G4,d:0.4},{f:NOTE.A4,d:0.4},
+    {f:NOTE.C5,d:0.5},{f:NOTE.D5,d:0.8},
+  ],
+  // Japan — Kimigayo
+  "🇯🇵": [
+    {f:NOTE.D4,d:0.8},{f:NOTE.F4,d:0.8},{f:NOTE.G4,d:0.6},
+    {f:NOTE.A4,d:0.8},{f:NOTE.G4,d:0.4},{f:NOTE.F4,d:0.6},
+    {f:NOTE.G4,d:0.4},{f:NOTE.A4,d:0.6},{f:NOTE.D5,d:0.8},
+  ],
+  // Netherlands — Wilhelmus
+  "🇳🇱": [
+    {f:NOTE.D4,d:0.5},{f:NOTE.G4,d:0.5},{f:NOTE.A4,d:0.4},{f:NOTE.B4,d:0.4},
+    {f:NOTE.C5,d:0.4},{f:NOTE.D5,d:0.6},{f:NOTE.B4,d:0.4},{f:NOTE.G4,d:0.6},
+    {f:NOTE.A4,d:0.4},{f:NOTE.B4,d:0.4},{f:NOTE.C5,d:0.4},{f:NOTE.D5,d:0.6},
+  ],
+  // Portugal — A Portuguesa
+  "🇵🇹": [
+    {f:NOTE.C5,d:0.4},{f:NOTE.G4,d:0.4},{f:NOTE.G4,d:0.4},{f:NOTE.C5,d:0.6},
+    {f:NOTE.E5,d:0.4},{f:NOTE.G5,d:0.6},{f:NOTE.E5,d:0.4},{f:NOTE.C5,d:0.6},
+    {f:NOTE.D5,d:0.4},{f:NOTE.E5,d:0.6},{f:NOTE.G4,d:0.6},
+  ],
+  // Belgium — La Brabanconne
+  "🇧🇪": [
+    {f:NOTE.G4,d:0.4},{f:NOTE.C5,d:0.4},{f:NOTE.E5,d:0.5},{f:NOTE.D5,d:0.4},
+    {f:NOTE.C5,d:0.4},{f:NOTE.B4,d:0.5},{f:NOTE.A4,d:0.4},{f:NOTE.G4,d:0.6},
+    {f:NOTE.A4,d:0.4},{f:NOTE.B4,d:0.4},{f:NOTE.C5,d:0.8},
+  ],
+  // Generic patriotic fanfare for unknown nations
+  "default": [
+    {f:NOTE.C5,d:0.4},{f:NOTE.E5,d:0.4},{f:NOTE.G5,d:0.4},{f:NOTE.C6,d:0.6},
+    {f:NOTE.G5,d:0.4},{f:NOTE.E5,d:0.4},{f:NOTE.C5,d:0.5},
+    {f:NOTE.F5,d:0.4},{f:NOTE.A5,d:0.4},{f:NOTE.C6,d:0.6},
+    {f:NOTE.G5,d:0.4},{f:NOTE.E5,d:0.4},{f:NOTE.C5,d:0.8},
+  ],
+};
+
+class AnthemPlayer {
+  constructor() { this.stopped = false; this.activeOscs = []; }
+  stop() {
+    this.stopped = true;
+    for (const o of this.activeOscs) { try { o.stop(); } catch(e){} }
+    this.activeOscs = [];
+  }
+  // Play a brass-like note with envelope
+  _playNote(ctx, freq, startTime, duration, volume = 0.06) {
+    if (!freq) return;
+    // Two slightly detuned sawtooths for a brass texture
+    [0, 3].forEach(detune => {
+      const osc = ctx.createOscillator();
+      osc.type = "sawtooth";
+      osc.frequency.value = freq;
+      osc.detune.value = detune;
+      const lpf = ctx.createBiquadFilter();
+      lpf.type = "lowpass";
+      lpf.frequency.value = Math.min(3000, freq * 5);
+      lpf.Q.value = 1.2;
+      const gain = ctx.createGain();
+      const attack = 0.04;
+      const release = 0.08;
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(volume, startTime + attack);
+      gain.gain.setValueAtTime(volume * 0.85, startTime + duration - release);
+      gain.gain.linearRampToValueAtTime(0, startTime + duration);
+      osc.connect(lpf).connect(gain).connect(ctx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + duration + 0.02);
+      this.activeOscs.push(osc);
+    });
+  }
+  // Play anthem for the given flag, fitting it into `targetDurationSec`.
+  // Notes are time-scaled so the whole melody fills the available time.
+  async play(flag, targetDurationSec = 5) {
+    if (audioFX.muted) {
+      await new Promise(r => setTimeout(r, targetDurationSec * 1000));
+      return;
+    }
+    audioFX.ensureCtx();
+    if (!audioFX.ctx) {
+      await new Promise(r => setTimeout(r, targetDurationSec * 1000));
+      return;
+    }
+    const ctx = audioFX.ctx;
+    const notes = ANTHEMS[flag] || ANTHEMS["default"];
+    const totalNoteDuration = notes.reduce((s, n) => s + n.d, 0);
+    const scale = targetDurationSec / totalNoteDuration;
+
+    this.stopped = false;
+    this.activeOscs = [];
+    let t = ctx.currentTime + 0.05;
+    for (const n of notes) {
+      if (this.stopped) break;
+      const dur = n.d * scale;
+      this._playNote(ctx, n.f, t, dur, 0.06);
+      t += dur;
+    }
+    return new Promise(resolve => setTimeout(resolve, targetDurationSec * 1000));
+  }
+}
+const anthemPlayer = new AnthemPlayer();
 
 // =====================================================================
 // VOICE MANAGER — better TTS with voice picker
@@ -1711,7 +1916,12 @@ function endReplay() {
   state.replay.active = false;
   state.replay.frames = [];
   state.replay.currentFrame = 0;
-  if (state.pendingResetAfterReplay) { resetBall(); state.pendingResetAfterReplay = false; }
+  if (state.pendingResetAfterReplay) {
+    resetBall();
+    // After a goal, line players up again on the centre line
+    resetPlayersToFormation();
+    state.pendingResetAfterReplay = false;
+  }
   if (cb) cb();
 }
 
@@ -2485,14 +2695,7 @@ function loop(now) {
       state.halftimeShown = true;
       state.autoplay = false;
       resetBall();
-      // Reset players to their initial positions and stop their movement,
-      // otherwise they keep running in the direction the LLM last sent them
-      for (const [name, p] of Object.entries(state.players)) {
-        const base = INITIAL_POS[name];
-        if (base) { p.x = base.x; p.y = base.y; }
-        p.dx = 0; p.dy = 0; p.kick = false;
-      }
-      state.lastLLMCall = 0;   // force immediate LLM call on resume
+      resetPlayersToFormation();
       renderStartStop();
       audioFX.doubleWhistle();
       fetchCommentary("halftime");
@@ -2583,25 +2786,92 @@ document.getElementById("su_plane_fg").addEventListener("input", (e) => {
   state.plane.fg = e.target.value;
 });
 
-document.getElementById("btn_start_stop").addEventListener("click", () => {
+// =====================================================================
+// MATCH CEREMONY — line-up + national anthems before kickoff
+// =====================================================================
+state.ceremony = { active: false, skipRequested: false };
+
+function showCeremonyTeam(team) {
+  const teamData = (team === "Red") ? state.teamRed : state.teamBlue;
+  document.getElementById("ceremony-flag").textContent = teamData.flag || "🏳️";
+  const nameEl = document.getElementById("ceremony-team-name");
+  nameEl.textContent = teamData.name;
+  nameEl.style.color = teamData.color;
+  document.getElementById("ceremony-status").textContent = "🎵 National Anthem · 5s";
+  const bar = document.getElementById("ceremony-bar");
+  bar.style.width = "0%";
+  bar.style.transition = "none";
+  // Trigger reflow then animate
+  void bar.offsetWidth;
+  bar.style.transition = "width 5s linear";
+  bar.style.width = "100%";
+}
+
+async function runCeremony() {
+  if (state.ceremony.active) return;
+  state.ceremony.active = true;
+  state.ceremony.skipRequested = false;
+
+  // Snap players into formation
+  resetPlayersToFormation();
+  state.ball = { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 };
+
+  // Show overlay
+  document.getElementById("ceremony-overlay").classList.add("show");
+
+  // Red team anthem (5s)
+  if (!state.ceremony.skipRequested) {
+    showCeremonyTeam("Red");
+    await anthemPlayer.play(state.teamRed.flag, 5);
+  }
+
+  // Blue team anthem (5s)
+  if (!state.ceremony.skipRequested) {
+    showCeremonyTeam("Blue");
+    await anthemPlayer.play(state.teamBlue.flag, 5);
+  }
+
+  // Hide overlay
+  document.getElementById("ceremony-overlay").classList.remove("show");
+  anthemPlayer.stop();
+  state.ceremony.active = false;
+
+  // Kick-off whistle and game start
+  audioFX.whistle();
+  fetchCommentary("kickoff");
+  state.autoplay = true;
+  renderStartStop();
+}
+
+document.getElementById("ceremony-skip").addEventListener("click", () => {
+  state.ceremony.skipRequested = true;
+  anthemPlayer.stop();
+});
+
+document.getElementById("btn_start_stop").addEventListener("click", async () => {
   audioFX.ensureCtx();
+  // If ceremony is running, ignore further clicks
+  if (state.ceremony.active) return;
+
   const wasOver = state.timeLeft <= 0;
   if (wasOver) {
     state.timeLeft = state.matchDuration;
     state.score = { Red: 0, Blue: 0 };
     state.matchRecorded = false; state.halftimeShown = false;
     state.commentaries = [];
-    state.ball = { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 };
     replayBuffer.clear();
     state.stats = { possessionTicks: {Red: 0, Blue: 0}, kicks: {Red: 0, Blue: 0}, shots: {Red: 0, Blue: 0} };
     state.heatmap = {};
     state.matchHighlights = [];
     state.shootout = { active: false, shooter: "Red", attempts: { Red: [], Blue: [] }, max: 5, finished: false };
     renderCommentaries(); renderStats();
+    // New match → run line-up + anthems ceremony
+    await runCeremony();
+    return;
   }
+  // Mid-match pause/resume — no ceremony, just toggle
   state.autoplay = !state.autoplay;
   audioFX.whistle();
-  if (state.autoplay && wasOver) fetchCommentary("kickoff");
   renderStartStop();
 });
 
@@ -2628,18 +2898,17 @@ document.getElementById("voice-picker").addEventListener("change", (e) => {
 });
 document.getElementById("btn-voice-test").addEventListener("click", () => voiceManager.test());
 
-document.getElementById("ft-new").addEventListener("click", () => {
+document.getElementById("ft-new").addEventListener("click", async () => {
   hideFullTime();
   state.timeLeft = state.matchDuration; state.score = { Red: 0, Blue: 0 };
   state.matchRecorded = false; state.halftimeShown = false; state.commentaries = [];
-  state.ball = { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 };
-  state.autoplay = true; replayBuffer.clear();
+  replayBuffer.clear();
   state.stats = { possessionTicks: {Red: 0, Blue: 0}, kicks: {Red: 0, Blue: 0}, shots: {Red: 0, Blue: 0} };
   state.heatmap = {};
   state.matchHighlights = [];
   state.shootout = { active: false, shooter: "Red", attempts: { Red: [], Blue: [] }, max: 5, finished: false };
-  audioFX.whistle(); fetchCommentary("kickoff");
-  renderCommentaries(); renderStats(); renderStartStop();
+  renderCommentaries(); renderStats();
+  await runCeremony();
 });
 document.getElementById("ft-close").addEventListener("click", hideFullTime);
 document.getElementById("ft-heatmap").addEventListener("click", () => { hideFullTime(); showHeatMap(); });
@@ -2651,6 +2920,8 @@ document.getElementById("pen-close").addEventListener("click", hidePenalty);
 
 document.getElementById("ht-resume").addEventListener("click", () => {
   hideHalftime();
+  resetBall();
+  resetPlayersToFormation();
   state.autoplay = true;
   audioFX.whistle(); renderStartStop();
 });
