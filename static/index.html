@@ -67,6 +67,8 @@
   button.purple:hover { color: #b388ff; box-shadow: 0 0 28px rgba(179, 136, 255, 0.5); }
   button.orange { background: linear-gradient(135deg, #3d2300 0%, #5c3500 100%); color: #ff9100; border-color: #ff9100; box-shadow: 0 0 16px rgba(255, 145, 0, 0.25); }
   button.orange:hover { color: #ff9100; box-shadow: 0 0 28px rgba(255, 145, 0, 0.5); }
+  button.danger { background: linear-gradient(135deg, #3d0a14 0%, #5c1020 100%); color: #ff5a6e; border-color: #ff5a6e; box-shadow: 0 0 16px rgba(255, 23, 68, 0.25); }
+  button.danger:hover { color: #ff5a6e; box-shadow: 0 0 28px rgba(255, 23, 68, 0.5); }
 
   .row { display: grid; gap: 10px; margin-bottom: 12px; }
   .row.cols-3 { grid-template-columns: 1.4fr 1fr 0.6fr; align-items: end; }
@@ -295,6 +297,9 @@
   .modal-card.heatmap { border: 1px solid rgba(255, 145, 0, 0.5); box-shadow: 0 0 60px rgba(255, 145, 0, 0.3); padding: 30px; max-width: 900px; }
   .modal-card.penalty { border: 1px solid rgba(179, 136, 255, 0.5); box-shadow: 0 0 60px rgba(179, 136, 255, 0.3); padding: 30px 40px; max-width: 540px; }
   .modal-card.ceremony { border: 1px solid rgba(255, 215, 0, 0.6); box-shadow: 0 0 80px rgba(255, 215, 0, 0.35); padding: 40px 50px; max-width: 560px; }
+  .anthem-preview { margin-top: 8px; width: auto; padding: 6px 14px; background: linear-gradient(135deg, #ffd700, #c79a00); color: #07080b; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 13px; }
+  .anthem-preview:hover { filter: brightness(1.1); }
+  .anthem-preview.playing { background: linear-gradient(135deg, #b388ff, #6644aa); color: #fff; }
   #ceremony-flag { font-size: 120px; line-height: 1; margin: 0 0 12px; animation: ceremonyPulse 2.5s ease-in-out infinite; filter: drop-shadow(0 0 24px rgba(255,215,0,0.45)); }
   #ceremony-team-name { font-family: 'Orbitron', monospace; font-size: 36px; margin: 0 0 8px; letter-spacing: 2px; text-shadow: 0 0 18px currentColor; }
   #ceremony-status { font-family: 'Orbitron', monospace; font-size: 16px; color: #ffd700; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 22px; }
@@ -426,6 +431,7 @@
         </div>
         <label>🐢 Team A dynamics: <span id="su_dyn_red_val">1.0</span>× 🐎</label>
         <input type="range" id="su_dyn_red" min="0.5" max="2.0" step="0.1" value="1.0">
+        <button id="btn_preview_anthem_red" class="anthem-preview">🎵 Preview anthem (5s)</button>
 
         <h3>Team B (right, attacks left goal)</h3>
         <div class="row cols-3">
@@ -435,6 +441,7 @@
         </div>
         <label>🐢 Team B dynamics: <span id="su_dyn_blue_val">1.0</span>× 🐎</label>
         <input type="range" id="su_dyn_blue" min="0.5" max="2.0" step="0.1" value="1.0">
+        <button id="btn_preview_anthem_blue" class="anthem-preview">🎵 Preview anthem (5s)</button>
         <label>Match duration: <span id="su_duration_val">90</span>s</label>
         <input type="range" id="su_duration" min="30" max="300" step="10" value="90">
 
@@ -502,7 +509,10 @@
     <div id="prompts_red"></div>
     <div id="prompts_blue" style="display:none"></div>
 
-    <button id="btn_reset" style="margin-top:6px">🔄 Reset ball</button>
+    <div style="display: flex; gap: 8px; margin-top:6px">
+      <button id="btn_reset" style="flex: 1" title="Move the ball back to the centre spot. Match continues.">🔄 Reset ball</button>
+      <button id="btn_reset_match" class="danger" style="flex: 1" title="Clear score and time, replay the kick-off ceremony, start a fresh match.">⏮️ Reset match</button>
+    </div>
 
     <details style="margin-top:10px">
       <summary>💾 Strategy library (<span id="strategy-count">0</span>)</summary>
@@ -732,6 +742,19 @@ class AudioFX {
     if (!this.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) this.ctx = new AC(); }
     if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
   }
+  // Async version that actually waits for resume to complete — needed for scheduled audio.
+  async ensureCtxReady() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) { console.warn("[Audio] Web Audio API not supported"); return false; }
+      this.ctx = new AC();
+    }
+    if (this.ctx.state === "suspended") {
+      try { await this.ctx.resume(); }
+      catch(e) { console.warn("[Audio] resume() failed:", e); return false; }
+    }
+    return this.ctx.state === "running";
+  }
   setMuted(m) { this.muted = m; localStorage.setItem(MUTE_KEY, m ? "1" : "0"); }
   whistle() {
     if (this.muted) return; this.ensureCtx(); if (!this.ctx) return;
@@ -887,6 +910,68 @@ const ANTHEMS = {
     {f:NOTE.C5,d:0.4},{f:NOTE.B4,d:0.5},{f:NOTE.A4,d:0.4},{f:NOTE.G4,d:0.6},
     {f:NOTE.A4,d:0.4},{f:NOTE.B4,d:0.4},{f:NOTE.C5,d:0.8},
   ],
+  // Singapore — Majulah Singapura (relevant for Singapore event!)
+  "🇸🇬": [
+    {f:NOTE.F4,d:0.4},{f:NOTE.G4,d:0.4},{f:NOTE.A4,d:0.4},{f:NOTE.Bb4,d:0.5},
+    {f:NOTE.A4,d:0.4},{f:NOTE.G4,d:0.4},{f:NOTE.F4,d:0.6},
+    {f:NOTE.G4,d:0.4},{f:NOTE.A4,d:0.4},{f:NOTE.Bb4,d:0.4},{f:NOTE.C5,d:0.5},
+    {f:NOTE.Bb4,d:0.4},{f:NOTE.A4,d:0.4},{f:NOTE.G4,d:0.8},
+  ],
+  // Austria — Land der Berge, Land am Strome
+  "🇦🇹": [
+    {f:NOTE.G4,d:0.4},{f:NOTE.G4,d:0.4},{f:NOTE.A4,d:0.4},{f:NOTE.B4,d:0.4},
+    {f:NOTE.C5,d:0.5},{f:NOTE.B4,d:0.4},{f:NOTE.A4,d:0.4},{f:NOTE.G4,d:0.6},
+    {f:NOTE.A4,d:0.4},{f:NOTE.B4,d:0.4},{f:NOTE.D5,d:0.5},{f:NOTE.C5,d:0.6},
+  ],
+  // Mexico — Himno Nacional Mexicano
+  "🇲🇽": [
+    {f:NOTE.G4,d:0.3},{f:NOTE.C5,d:0.5},{f:NOTE.E5,d:0.3},{f:NOTE.G5,d:0.5},
+    {f:NOTE.E5,d:0.4},{f:NOTE.C5,d:0.5},{f:NOTE.D5,d:0.4},{f:NOTE.E5,d:0.4},
+    {f:NOTE.F5,d:0.4},{f:NOTE.E5,d:0.4},{f:NOTE.D5,d:0.4},{f:NOTE.C5,d:0.6},
+  ],
+  // Sweden — Du gamla, du fria
+  "🇸🇪": [
+    {f:NOTE.G4,d:0.6},{f:NOTE.G4,d:0.3},{f:NOTE.A4,d:0.3},{f:NOTE.B4,d:0.5},
+    {f:NOTE.A4,d:0.3},{f:NOTE.G4,d:0.5},{f:NOTE.F4,d:0.4},{f:NOTE.E4,d:0.5},
+    {f:NOTE.G4,d:0.4},{f:NOTE.A4,d:0.4},{f:NOTE.B4,d:0.6},{f:NOTE.C5,d:0.4},
+  ],
+  // Poland — Mazurek Dąbrowskiego
+  "🇵🇱": [
+    {f:NOTE.D5,d:0.4},{f:NOTE.D5,d:0.2},{f:NOTE.D5,d:0.2},{f:NOTE.D5,d:0.4},
+    {f:NOTE.G5,d:0.4},{f:NOTE.F5,d:0.4},{f:NOTE.E5,d:0.4},
+    {f:NOTE.D5,d:0.4},{f:NOTE.C5,d:0.3},{f:NOTE.B4,d:0.3},{f:NOTE.A4,d:0.6},
+    {f:NOTE.G4,d:0.6},
+  ],
+  // Norway — Ja, vi elsker dette landet
+  "🇳🇴": [
+    {f:NOTE.G4,d:0.4},{f:NOTE.E4,d:0.4},{f:NOTE.E4,d:0.4},{f:NOTE.G4,d:0.4},
+    {f:NOTE.G4,d:0.4},{f:NOTE.A4,d:0.4},{f:NOTE.B4,d:0.4},{f:NOTE.C5,d:0.4},
+    {f:NOTE.B4,d:0.4},{f:NOTE.A4,d:0.4},{f:NOTE.G4,d:0.8},
+  ],
+  // Denmark — Der er et yndigt land
+  "🇩🇰": [
+    {f:NOTE.G4,d:0.4},{f:NOTE.G4,d:0.4},{f:NOTE.A4,d:0.4},{f:NOTE.B4,d:0.5},
+    {f:NOTE.D5,d:0.4},{f:NOTE.C5,d:0.4},{f:NOTE.B4,d:0.6},
+    {f:NOTE.A4,d:0.4},{f:NOTE.B4,d:0.4},{f:NOTE.G4,d:0.8},
+  ],
+  // Croatia — Lijepa naša domovino
+  "🇭🇷": [
+    {f:NOTE.D5,d:0.5},{f:NOTE.D5,d:0.4},{f:NOTE.E5,d:0.4},{f:NOTE.D5,d:0.4},
+    {f:NOTE.C5,d:0.4},{f:NOTE.B4,d:0.4},{f:NOTE.A4,d:0.5},
+    {f:NOTE.B4,d:0.4},{f:NOTE.C5,d:0.4},{f:NOTE.D5,d:0.8},
+  ],
+  // South Korea — Aegukga
+  "🇰🇷": [
+    {f:NOTE.E4,d:0.4},{f:NOTE.G4,d:0.4},{f:NOTE.A4,d:0.4},{f:NOTE.B4,d:0.5},
+    {f:NOTE.A4,d:0.4},{f:NOTE.G4,d:0.4},{f:NOTE.E4,d:0.6},
+    {f:NOTE.G4,d:0.4},{f:NOTE.A4,d:0.4},{f:NOTE.B4,d:0.4},{f:NOTE.D5,d:0.6},
+  ],
+  // England — God Save the King (same as UK)
+  "🏴󠁧󠁢󠁥󠁮󠁧󠁿": [
+    {f:NOTE.G4,d:0.6},{f:NOTE.G4,d:0.6},{f:NOTE.A4,d:0.6},
+    {f:NOTE.F4,d:0.4},{f:NOTE.G4,d:0.4},{f:NOTE.A4,d:0.4},
+    {f:NOTE.Bb4,d:1.0},{f:NOTE.Bb4,d:0.6},{f:NOTE.C5,d:0.6},
+  ],
   // Generic patriotic fanfare for unknown nations
   "default": [
     {f:NOTE.C5,d:0.4},{f:NOTE.E5,d:0.4},{f:NOTE.G5,d:0.4},{f:NOTE.C6,d:0.6},
@@ -897,64 +982,88 @@ const ANTHEMS = {
 };
 
 class AnthemPlayer {
-  constructor() { this.stopped = false; this.activeOscs = []; }
+  constructor() { this.stopped = false; this.activeOscs = []; this.activeGains = []; }
   stop() {
     this.stopped = true;
-    for (const o of this.activeOscs) { try { o.stop(); } catch(e){} }
-    this.activeOscs = [];
+    const now = audioFX.ctx ? audioFX.ctx.currentTime : 0;
+    // Fade out gains quickly to avoid clicks, then stop oscillators
+    for (const g of this.activeGains) {
+      try { g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(g.gain.value, now); g.gain.linearRampToValueAtTime(0, now + 0.05); } catch(e){}
+    }
+    for (const o of this.activeOscs) {
+      try { o.stop(now + 0.06); } catch(e){}
+    }
+    this.activeOscs = []; this.activeGains = [];
   }
-  // Play a brass-like note with envelope
-  _playNote(ctx, freq, startTime, duration, volume = 0.06) {
-    if (!freq) return;
-    // Two slightly detuned sawtooths for a brass texture
-    [0, 3].forEach(detune => {
+  _playNote(ctx, freq, startTime, duration, volume) {
+    if (!freq || duration <= 0) return;
+    // Two slightly detuned sawtooths + one sine sub for warmer brass timbre
+    const layers = [
+      { type: "sawtooth", detune: -4, gainMult: 1.0 },
+      { type: "sawtooth", detune: +4, gainMult: 1.0 },
+      { type: "sine",     detune: 0,  gainMult: 0.5 },
+    ];
+    for (const l of layers) {
       const osc = ctx.createOscillator();
-      osc.type = "sawtooth";
+      osc.type = l.type;
       osc.frequency.value = freq;
-      osc.detune.value = detune;
+      osc.detune.value = l.detune;
       const lpf = ctx.createBiquadFilter();
       lpf.type = "lowpass";
-      lpf.frequency.value = Math.min(3000, freq * 5);
-      lpf.Q.value = 1.2;
+      lpf.frequency.value = Math.min(4500, freq * 6);
+      lpf.Q.value = 0.8;
       const gain = ctx.createGain();
-      const attack = 0.04;
-      const release = 0.08;
+      const v = volume * l.gainMult;
+      // Smooth envelope: attack → sustain → release
+      const attack = 0.05;
+      const release = Math.min(0.12, duration * 0.3);
       gain.gain.setValueAtTime(0, startTime);
-      gain.gain.linearRampToValueAtTime(volume, startTime + attack);
-      gain.gain.setValueAtTime(volume * 0.85, startTime + duration - release);
+      gain.gain.linearRampToValueAtTime(v, startTime + attack);
+      gain.gain.linearRampToValueAtTime(v * 0.9, Math.max(startTime + attack, startTime + duration - release));
       gain.gain.linearRampToValueAtTime(0, startTime + duration);
       osc.connect(lpf).connect(gain).connect(ctx.destination);
       osc.start(startTime);
-      osc.stop(startTime + duration + 0.02);
+      osc.stop(startTime + duration + 0.05);
       this.activeOscs.push(osc);
-    });
+      this.activeGains.push(gain);
+    }
   }
-  // Play anthem for the given flag, fitting it into `targetDurationSec`.
-  // Notes are time-scaled so the whole melody fills the available time.
   async play(flag, targetDurationSec = 5) {
+    console.log(`[Anthem] play(${flag}, ${targetDurationSec}s) — muted: ${audioFX.muted}`);
     if (audioFX.muted) {
+      console.log("[Anthem] AudioFX is muted — skipping (mute button is 🔇)");
       await new Promise(r => setTimeout(r, targetDurationSec * 1000));
       return;
     }
-    audioFX.ensureCtx();
-    if (!audioFX.ctx) {
+    const ready = await audioFX.ensureCtxReady();
+    if (!ready) {
+      console.warn("[Anthem] AudioContext not ready — no sound");
       await new Promise(r => setTimeout(r, targetDurationSec * 1000));
       return;
     }
     const ctx = audioFX.ctx;
+    console.log(`[Anthem] ctx state: ${ctx.state}, currentTime: ${ctx.currentTime.toFixed(3)}`);
+
     const notes = ANTHEMS[flag] || ANTHEMS["default"];
+    if (!ANTHEMS[flag]) console.log(`[Anthem] no anthem for ${flag} — using default fanfare`);
+
     const totalNoteDuration = notes.reduce((s, n) => s + n.d, 0);
     const scale = targetDurationSec / totalNoteDuration;
+    console.log(`[Anthem] ${notes.length} notes, scaled by ${scale.toFixed(2)}x`);
 
     this.stopped = false;
     this.activeOscs = [];
-    let t = ctx.currentTime + 0.05;
+    this.activeGains = [];
+    let t = ctx.currentTime + 0.08;
+    const startT = t;
     for (const n of notes) {
       if (this.stopped) break;
       const dur = n.d * scale;
-      this._playNote(ctx, n.f, t, dur, 0.06);
+      this._playNote(ctx, n.f, t, dur, 0.18);
       t += dur;
     }
+    console.log(`[Anthem] scheduled notes from ${startT.toFixed(3)} to ${t.toFixed(3)} (${(t-startT).toFixed(2)}s)`);
+
     return new Promise(resolve => setTimeout(resolve, targetDurationSec * 1000));
   }
 }
@@ -1314,6 +1423,8 @@ const state = {
   lastStatePush: 0,
   // Referee — follows ball with diagonal offset
   referee: { x: FIELD_W / 2 - 80, y: FIELD_H / 2 + 80, armRaised: 0 },
+  // Match ceremony — line-up + anthems before kickoff
+  ceremony: { active: false, skipRequested: false },
 };
 
 // =====================================================================
@@ -2456,8 +2567,21 @@ function renderStats() {
 
 function renderStartStop() {
   const btn = document.getElementById("btn_start_stop");
-  if (state.autoplay) { btn.textContent = "⏹️ Stop match"; btn.classList.add("primary"); }
-  else { btn.textContent = "▶️ Start match"; btn.classList.remove("primary"); }
+  const wasOver = state.timeLeft <= 0;
+  const midMatch = !state.autoplay && state.timeLeft > 0 && state.timeLeft < state.matchDuration;
+  if (state.autoplay) {
+    btn.textContent = "⏸️ Pause match";
+    btn.classList.add("primary");
+  } else if (midMatch) {
+    btn.textContent = "▶️ Resume match";
+    btn.classList.remove("primary");
+  } else if (wasOver) {
+    btn.textContent = "▶️ New match";
+    btn.classList.remove("primary");
+  } else {
+    btn.textContent = "▶️ Start match";
+    btn.classList.remove("primary");
+  }
 }
 function renderApiError() { document.getElementById("api_error_box").innerHTML = state.apiError ? `<div class="error">⚠️ API error: ${state.apiError}</div>` : ""; }
 function renderMuteButton() { document.getElementById("btn-mute").textContent = audioFX.muted ? "🔇" : "🔊"; }
@@ -2789,8 +2913,6 @@ document.getElementById("su_plane_fg").addEventListener("input", (e) => {
 // =====================================================================
 // MATCH CEREMONY — line-up + national anthems before kickoff
 // =====================================================================
-state.ceremony = { active: false, skipRequested: false };
-
 function showCeremonyTeam(team) {
   const teamData = (team === "Red") ? state.teamRed : state.teamBlue;
   document.getElementById("ceremony-flag").textContent = teamData.flag || "🏳️";
@@ -2875,7 +2997,61 @@ document.getElementById("btn_start_stop").addEventListener("click", async () => 
   renderStartStop();
 });
 
+function previewAnthem(side) {
+  const btn = document.getElementById(`btn_preview_anthem_${side}`);
+  if (btn.classList.contains("playing")) {
+    anthemPlayer.stop();
+    btn.classList.remove("playing");
+    btn.textContent = "🎵 Preview anthem (5s)";
+    return;
+  }
+  audioFX.ensureCtx();
+  const nationName = document.getElementById(`su_nation_${side}`).value;
+  const flag = (NATIONS[nationName] || {}).flag || "🏳️";
+  const hasAnthem = !!ANTHEMS[flag];
+  btn.classList.add("playing");
+  btn.textContent = hasAnthem ? `⏹ Playing ${flag} ${nationName}…` : `⏹ Playing fanfare (no anthem for ${nationName})`;
+  anthemPlayer.play(flag, 5).then(() => {
+    btn.classList.remove("playing");
+    btn.textContent = "🎵 Preview anthem (5s)";
+  });
+}
+document.getElementById("btn_preview_anthem_red").addEventListener("click", () => previewAnthem("red"));
+document.getElementById("btn_preview_anthem_blue").addEventListener("click", () => previewAnthem("blue"));
+
 document.getElementById("btn_reset").addEventListener("click", () => resetBall());
+
+document.getElementById("btn_reset_match").addEventListener("click", async () => {
+  if (state.ceremony.active) return;
+  // Confirm if the match is in progress (has played time or any goals)
+  const inProgress = (state.timeLeft < state.matchDuration && state.timeLeft > 0)
+                    || state.score.Red > 0 || state.score.Blue > 0;
+  if (inProgress) {
+    if (!confirm("Reset the current match?\nScore, time and positions will be cleared, and the kick-off ceremony will play again.")) return;
+  }
+  // Pause and stop anything running
+  state.autoplay = false;
+  anthemPlayer.stop();
+  if (state.replay.active) {
+    state.replay.active = false; state.replay.frames = []; state.replay.currentFrame = 0;
+    state.pendingResetAfterReplay = false;
+  }
+  // Clear match state
+  state.timeLeft = state.matchDuration;
+  state.score = { Red: 0, Blue: 0 };
+  state.matchRecorded = false; state.halftimeShown = false;
+  state.commentaries = [];
+  replayBuffer.clear();
+  state.stats = { possessionTicks: {Red: 0, Blue: 0}, kicks: {Red: 0, Blue: 0}, shots: {Red: 0, Blue: 0} };
+  state.heatmap = {};
+  state.matchHighlights = [];
+  state.shootout = { active: false, shooter: "Red", attempts: { Red: [], Blue: [] }, max: 5, finished: false };
+  resetBall();
+  resetPlayersToFormation();
+  renderCommentaries(); renderStats(); renderStartStop(); renderScore();
+  // Run the kick-off ceremony again
+  await runCeremony();
+});
 
 document.getElementById("btn_clear_history").addEventListener("click", () => {
   if (confirm("Clear all match history? This cannot be undone.")) { saveHistory([]); renderHistory(); }
