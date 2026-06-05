@@ -150,6 +150,18 @@
     border-radius: 6px;
     background: linear-gradient(135deg, #0d2818 0%, #0f3520 100%);
   }
+  .ad-banner {
+    height: 26px; line-height: 26px;
+    text-align: center;
+    font-family: "Orbitron", monospace;
+    font-weight: 900; font-size: 12px;
+    text-transform: uppercase; letter-spacing: 2px;
+    background: #1a1c23; color: #ffd700;
+    border-radius: 4px; margin: 4px 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
   #replay-banner {
     position: absolute;
     top: 14px;
@@ -322,7 +334,9 @@
 
   <div id="pitch-wrap">
     <div id="replay-banner">🎬 SLOW-MO REPLAY</div>
+    <div id="banner-top" class="ad-banner">PTE ASPIRE</div>
     <canvas id="pitch" width="800" height="500"></canvas>
+    <div id="banner-bottom" class="ad-banner">FIFA WORLD CUP 2026 🇺🇸</div>
   </div>
 
   <div id="stats">
@@ -374,6 +388,7 @@
   const HAIR_COLORS  = ["#1a0e08","#3a200e","#6b4523","#a87436","#c69a4f","#d4d4d4","#b03020"];
   const HAIR_STYLES  = ["short","spiky","curly","bald","buzz","mohawk","long"];
   const MOUTH_STYLES = ["neutral","smile","smirk"];
+  const ROLE_NUMBERS = { Striker: 9, Midfielder: 10, Defender: 4, Goalkeeper: 1 };
   function generateAppearance(name) {
     const h = hashString(name);
     return {
@@ -459,6 +474,12 @@
     ctx.beginPath(); ctx.arc(cx - head_r * 0.42, head_cy - head_r * 0.1, 0.95, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(cx + head_r * 0.42, head_cy - head_r * 0.1, 0.95, 0, Math.PI * 2); ctx.fill();
     drawMouth(ctx, cx, head_cy, head_r, appearance.mouth);
+    const num = ROLE_NUMBERS[role];
+    if (num != null) {
+      ctx.fillStyle = isGK ? "#1a1a1a" : "rgba(255,255,255,0.95)";
+      ctx.font = "bold 7px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText(String(num), cx, cy + r * 0.78);
+    }
     if (isGK) {
       ctx.strokeStyle = teamColor; ctx.lineWidth = 2.6;
       ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
@@ -631,6 +652,22 @@
     if (payload.nations) {
       document.getElementById("flag-red").textContent = payload.nations.red || "🔴";
       document.getElementById("flag-blue").textContent = payload.nations.blue || "🔵";
+    }
+
+    // Stadium banners
+    if (payload.banners) {
+      const top = document.getElementById("banner-top");
+      const bot = document.getElementById("banner-bottom");
+      if (payload.banners.top) {
+        top.textContent      = payload.banners.top.text || "";
+        top.style.background = payload.banners.top.bg || "#1a1c23";
+        top.style.color      = payload.banners.top.fg || "#ffd700";
+      }
+      if (payload.banners.bottom) {
+        bot.textContent      = payload.banners.bottom.text || "";
+        bot.style.background = payload.banners.bottom.bg || "#1a1c23";
+        bot.style.color      = payload.banners.bottom.fg || "#00e676";
+      }
     }
 
     // Score (detect goal)
