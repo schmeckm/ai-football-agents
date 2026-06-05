@@ -158,13 +158,10 @@
   #btn-mute:hover, #btn-tts:hover, #btn-commentary:hover { transform: none; color: #00e676; border-color: #00e676; box-shadow: 0 0 12px rgba(0, 230, 118, 0.3); }
   canvas { background: #235e29; border: 3px solid #fff; border-radius: 8px; width: 100%; height: auto; display: block; box-shadow: 0 0 40px rgba(0, 230, 118, 0.15), 0 8px 32px rgba(0, 0, 0, 0.5); }
 
-  /* Stadium ad banners — LED board look */
+  /* Stadium ad banners — LED board with scrolling marquee */
   .ad-banner {
-    height: 38px; line-height: 38px;
-    text-align: center;
-    font-family: 'Orbitron', 'Inter', sans-serif;
-    font-weight: 900; font-size: 15px;
-    text-transform: uppercase; letter-spacing: 4px;
+    height: 38px;
+    text-align: left;
     border-radius: 6px;
     background:
       linear-gradient(180deg, rgba(255,255,255,0.10) 0%, transparent 25%, transparent 70%, rgba(0,0,0,0.30) 100%),
@@ -174,7 +171,6 @@
     color: #ffd700;
     margin: 6px 0;
     overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
     border-top: 1px solid rgba(255,255,255,0.15);
     border-bottom: 2px solid rgba(0,0,0,0.7);
@@ -182,18 +178,53 @@
       inset 0 1px 2px rgba(255,255,255,0.20),
       inset 0 -8px 16px rgba(0,0,0,0.40),
       0 5px 14px rgba(0,0,0,0.50);
-    text-shadow:
-      0 0 6px currentColor,
-      0 0 2px rgba(0,0,0,0.8),
-      0 1px 0 rgba(0,0,0,0.5);
     position: relative;
   }
-  .ad-banner::before {
+  .ad-banner::after {
     content: '';
     position: absolute; inset: 0;
     background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.35) 100%);
     pointer-events: none;
     border-radius: 6px;
+    z-index: 2;
+  }
+  .ad-banner .banner-marquee {
+    display: inline-flex;
+    align-items: center;
+    height: 100%;
+    animation: bannerScroll 18s linear infinite;
+    will-change: transform;
+  }
+  .ad-banner .banner-text {
+    display: inline-block;
+    padding: 0 60px;
+    font-family: 'Orbitron', 'Inter', sans-serif;
+    font-weight: 900;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    line-height: 38px;
+    text-shadow:
+      0 0 6px currentColor,
+      0 0 2px rgba(0,0,0,0.8),
+      0 1px 0 rgba(0,0,0,0.5);
+  }
+  @keyframes bannerScroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* Crowd stripes — stadium spectators above and below the pitch */
+  .crowd-strip {
+    width: 100%;
+    height: 30px;
+    display: block;
+    border-radius: 4px;
+    margin: 4px 0;
+    box-shadow:
+      inset 0 2px 6px rgba(0, 0, 0, 0.6),
+      inset 0 -2px 6px rgba(0, 0, 0, 0.4);
+    background: #0a0e18;
   }
 
   /* Live Match Stats */
@@ -496,9 +527,11 @@
         <span id="live-tag">● LIVE</span>
       </span>
     </div>
-    <div id="banner-top" class="ad-banner">PTE ASPIRE</div>
+    <canvas id="crowd-top" class="crowd-strip" width="800" height="30"></canvas>
+    <div id="banner-top" class="ad-banner"><div class="banner-marquee"><span class="banner-text"></span><span class="banner-text"></span></div></div>
     <canvas id="pitch" width="800" height="500"></canvas>
-    <div id="banner-bottom" class="ad-banner">FIFA WORLD CUP 2026 🇺🇸</div>
+    <div id="banner-bottom" class="ad-banner"><div class="banner-marquee"><span class="banner-text"></span><span class="banner-text"></span></div></div>
+    <canvas id="crowd-bottom" class="crowd-strip" width="800" height="30"></canvas>
 
     <div id="stats-bar">
       <div class="stat-side red">
@@ -1136,12 +1169,60 @@ function loadSetupFromState() {
 function applyBannersToUI() {
   const top = document.getElementById("banner-top");
   const bot = document.getElementById("banner-bottom");
-  top.textContent          = state.banners.top.text;
-  top.style.backgroundColor= state.banners.top.bg;
-  top.style.color          = state.banners.top.fg;
-  bot.textContent          = state.banners.bottom.text;
-  bot.style.backgroundColor= state.banners.bottom.bg;
-  bot.style.color          = state.banners.bottom.fg;
+  top.style.backgroundColor = state.banners.top.bg;
+  top.style.color           = state.banners.top.fg;
+  top.querySelectorAll(".banner-text").forEach(el => el.textContent = state.banners.top.text);
+  bot.style.backgroundColor = state.banners.bottom.bg;
+  bot.style.color           = state.banners.bottom.fg;
+  bot.querySelectorAll(".banner-text").forEach(el => el.textContent = state.banners.bottom.text);
+}
+
+// Stadium crowd — render once into both crowd canvases
+function renderCrowd() {
+  const palette = [
+    "#c79a4f", "#4a3a2a", "#d4a574", "#7a5a3a",
+    "#e0c090", "#a07a5a", "#c4a880", "#5d4530",
+    "#3a2818", "#9a7448", "#6d4f30", "#bf8e5e",
+    // accent fan colours (less frequent, mixed in)
+    "#ff5a4d", "#3a82bd", "#ffd700", "#00e676", "#b388ff", "#fff",
+  ];
+  function paint(canvas, seed) {
+    const c = canvas.getContext("2d");
+    const W = canvas.width, H = canvas.height;
+    // Dark stand background gradient
+    const grad = c.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, "#0a0e18");
+    grad.addColorStop(0.5, "#161c2c");
+    grad.addColorStop(1, "#0a0e18");
+    c.fillStyle = grad;
+    c.fillRect(0, 0, W, H);
+    // Many small heads, deterministic per (x, row) + seed
+    const rowSpacing = 4.5;
+    const colSpacing = 4.5;
+    for (let row = 0; row < Math.floor(H / rowSpacing) - 1; row++) {
+      const y = 3 + row * rowSpacing;
+      for (let x = 3; x < W; x += colSpacing) {
+        const h = ((x * 73 + row * 19 + seed) | 0) >>> 0;
+        const colorIdx = h % palette.length;
+        const sizeJitter = ((h >> 4) % 3) * 0.18;
+        const xJitter = (((h >> 8) % 3) - 1) * 0.6;
+        const yJitter = (((h >> 12) % 3) - 1) * 0.4;
+        c.fillStyle = palette[colorIdx];
+        c.beginPath();
+        c.arc(x + xJitter, y + yJitter, 1.4 + sizeJitter, 0, Math.PI * 2);
+        c.fill();
+      }
+    }
+    // Subtle overhead light/shadow band
+    const overlay = c.createLinearGradient(0, 0, 0, H);
+    overlay.addColorStop(0, "rgba(0, 0, 0, 0.0)");
+    overlay.addColorStop(0.5, "rgba(0, 0, 0, 0.0)");
+    overlay.addColorStop(1, "rgba(0, 0, 0, 0.35)");
+    c.fillStyle = overlay;
+    c.fillRect(0, 0, W, H);
+  }
+  paint(document.getElementById("crowd-top"), 12345);
+  paint(document.getElementById("crowd-bottom"), 67890);
 }
 
 function applySetup() {
@@ -2553,6 +2634,7 @@ document.addEventListener("keydown", (e) => {
 populateNationDropdowns();
 loadSetupFromState();
 initQRCode();
+renderCrowd();
 renderTabs();
 renderPrompts();
 renderScore();

@@ -151,24 +151,49 @@
     background: linear-gradient(135deg, #0d2818 0%, #0f3520 100%);
   }
   .ad-banner {
-    height: 30px; line-height: 30px;
-    text-align: center;
-    font-family: "Orbitron", monospace;
-    font-weight: 900; font-size: 12px;
-    text-transform: uppercase; letter-spacing: 2px;
+    height: 30px;
     background:
       linear-gradient(180deg, rgba(255,255,255,0.10) 0%, transparent 25%, transparent 70%, rgba(0,0,0,0.30) 100%),
       radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08) 0.4px, transparent 1.2px),
       #1a1c23;
     background-size: 100% 100%, 4px 4px, 100% 100%;
     color: #ffd700;
-    border-radius: 4px; margin: 5px 0;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    border-radius: 4px; margin: 4px 0;
+    overflow: hidden;
     border-top: 1px solid rgba(255,255,255,0.15);
     border-bottom: 2px solid rgba(0,0,0,0.7);
     box-shadow: inset 0 1px 1px rgba(255,255,255,0.15), inset 0 -6px 12px rgba(0,0,0,0.4), 0 3px 8px rgba(0,0,0,0.4);
-    text-shadow: 0 0 5px currentColor, 0 0 2px rgba(0,0,0,0.8);
     position: relative;
+    white-space: nowrap;
+  }
+  .ad-banner .banner-marquee {
+    display: inline-flex;
+    align-items: center;
+    height: 100%;
+    animation: bannerScroll 18s linear infinite;
+    will-change: transform;
+  }
+  .ad-banner .banner-text {
+    display: inline-block;
+    padding: 0 40px;
+    font-family: "Orbitron", monospace;
+    font-weight: 900;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    line-height: 30px;
+    text-shadow: 0 0 5px currentColor, 0 0 2px rgba(0,0,0,0.8);
+  }
+  @keyframes bannerScroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  .crowd-strip {
+    width: 100%; height: 24px;
+    display: block; border-radius: 3px;
+    margin: 3px 0;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.6), inset 0 -2px 4px rgba(0,0,0,0.4);
+    background: #0a0e18;
   }
   #replay-banner {
     position: absolute;
@@ -342,9 +367,11 @@
 
   <div id="pitch-wrap">
     <div id="replay-banner">🎬 SLOW-MO REPLAY</div>
-    <div id="banner-top" class="ad-banner">PTE ASPIRE</div>
+    <canvas id="crowd-top" class="crowd-strip" width="800" height="24"></canvas>
+    <div id="banner-top" class="ad-banner"><div class="banner-marquee"><span class="banner-text"></span><span class="banner-text"></span></div></div>
     <canvas id="pitch" width="800" height="500"></canvas>
-    <div id="banner-bottom" class="ad-banner">FIFA WORLD CUP 2026 🇺🇸</div>
+    <div id="banner-bottom" class="ad-banner"><div class="banner-marquee"><span class="banner-text"></span><span class="banner-text"></span></div></div>
+    <canvas id="crowd-bottom" class="crowd-strip" width="800" height="24"></canvas>
   </div>
 
   <div id="stats">
@@ -716,12 +743,12 @@
       const top = document.getElementById("banner-top");
       const bot = document.getElementById("banner-bottom");
       if (payload.banners.top) {
-        top.textContent           = payload.banners.top.text || "";
+        top.querySelectorAll(".banner-text").forEach(el => el.textContent = payload.banners.top.text || "");
         top.style.backgroundColor = payload.banners.top.bg || "#1a1c23";
         top.style.color           = payload.banners.top.fg || "#ffd700";
       }
       if (payload.banners.bottom) {
-        bot.textContent           = payload.banners.bottom.text || "";
+        bot.querySelectorAll(".banner-text").forEach(el => el.textContent = payload.banners.bottom.text || "");
         bot.style.backgroundColor = payload.banners.bottom.bg || "#1a1c23";
         bot.style.color           = payload.banners.bottom.fg || "#00e676";
       }
@@ -801,6 +828,35 @@
 
   // Initial draw
   drawPitch();
+
+  // Crowd
+  function renderCrowd() {
+    const palette = [
+      "#c79a4f","#4a3a2a","#d4a574","#7a5a3a","#e0c090","#a07a5a","#c4a880","#5d4530",
+      "#3a2818","#9a7448","#6d4f30","#bf8e5e",
+      "#ff5a4d","#3a82bd","#ffd700","#00e676","#b388ff","#fff",
+    ];
+    function paint(canvas, seed) {
+      const c = canvas.getContext("2d");
+      const W = canvas.width, H = canvas.height;
+      const grad = c.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, "#0a0e18"); grad.addColorStop(0.5, "#161c2c"); grad.addColorStop(1, "#0a0e18");
+      c.fillStyle = grad; c.fillRect(0, 0, W, H);
+      for (let row = 0; row < Math.floor(H / 4.5) - 1; row++) {
+        const y = 3 + row * 4.5;
+        for (let x = 3; x < W; x += 4.5) {
+          const h = ((x * 73 + row * 19 + seed) | 0) >>> 0;
+          c.fillStyle = palette[h % palette.length];
+          c.beginPath();
+          c.arc(x + (((h >> 8) % 3) - 1) * 0.6, y + (((h >> 12) % 3) - 1) * 0.4, 1.3 + ((h >> 4) % 3) * 0.18, 0, Math.PI * 2);
+          c.fill();
+        }
+      }
+    }
+    paint(document.getElementById("crowd-top"), 12345);
+    paint(document.getElementById("crowd-bottom"), 67890);
+  }
+  renderCrowd();
 
   // Start polling
   poll();
