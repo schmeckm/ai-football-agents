@@ -308,6 +308,74 @@
     letter-spacing: 0.5px;
   }
 
+  /* Ceremony overlay (synced from main client) */
+  #ceremony-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 6, 10, 0.88);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 900;
+    padding: 20px;
+  }
+  #ceremony-overlay.show { display: flex; }
+  .ceremony-card {
+    background: var(--panel);
+    border: 1px solid rgba(255, 215, 0, 0.55);
+    border-radius: 16px;
+    box-shadow: 0 0 60px rgba(255, 215, 0, 0.25);
+    padding: 28px 24px 22px;
+    text-align: center;
+    max-width: 360px;
+    width: 100%;
+  }
+  #ceremony-flag {
+    font-size: 72px;
+    line-height: 1;
+    margin-bottom: 10px;
+    animation: ceremonyPulse 2.5s ease-in-out infinite;
+    filter: drop-shadow(0 0 18px rgba(255, 215, 0, 0.4));
+  }
+  #ceremony-team-name {
+    font-family: "Orbitron", monospace;
+    font-size: 22px;
+    margin: 0 0 6px;
+    letter-spacing: 1px;
+  }
+  #ceremony-status {
+    font-family: "Orbitron", monospace;
+    font-size: 12px;
+    color: var(--yellow);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  #ceremony-progress {
+    width: 100%;
+    height: 7px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  #ceremony-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #ffd700 0%, #ffea4f 100%);
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.55);
+    transition: none;
+  }
+  #live-tag.ceremony {
+    color: var(--yellow);
+    border-color: rgba(255, 213, 79, 0.45);
+    background: rgba(255, 213, 79, 0.12);
+  }
+  #live-tag.ceremony .dot { background: var(--yellow); }
+  @keyframes ceremonyPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+  }
+
   @media (max-width: 380px) {
     .team-score { font-size: 36px; }
     #timer { font-size: 20px; }
@@ -380,6 +448,15 @@
 </div>
 
 <div id="goal-flash"><div id="goal-text">GOAL!</div></div>
+
+<div id="ceremony-overlay">
+  <div class="ceremony-card">
+    <div id="ceremony-flag">🏳️</div>
+    <h2 id="ceremony-team-name">Team</h2>
+    <div id="ceremony-status">🎵 National Anthem</div>
+    <div id="ceremony-progress"><div id="ceremony-bar"></div></div>
+  </div>
+</div>
 
 <script>
   const FIELD_W = 800;
@@ -502,6 +579,35 @@
   // Track last score to detect goals for flash
   let lastScore = { Red: 0, Blue: 0 };
   let lastCommentaryCount = 0;
+  let lastCeremony = null;
+
+  function updateCeremonyOverlay(ceremony) {
+    const overlay = document.getElementById("ceremony-overlay");
+    if (!ceremony || !ceremony.active) {
+      overlay.classList.remove("show");
+      lastCeremony = null;
+      return;
+    }
+    lastCeremony = ceremony;
+    overlay.classList.add("show");
+    document.getElementById("ceremony-flag").textContent = ceremony.flag || "🏳️";
+    const nameEl = document.getElementById("ceremony-team-name");
+    nameEl.textContent = ceremony.teamName || "Team";
+    nameEl.style.color = ceremony.teamColor || "var(--text)";
+    const dur = Math.max(1, ceremony.durationSec || 1);
+    const elapsed = Math.max(0, (Date.now() - (ceremony.startedAt || Date.now())) / 1000);
+    const progress = Math.min(1, elapsed / dur);
+    const remaining = Math.max(0, Math.ceil(dur - elapsed));
+    const prefix = ceremony.statusPrefix || (ceremony.mode === "winner" ? "🏆 Victory Anthem" : "🎵 National Anthem");
+    document.getElementById("ceremony-status").textContent = `${prefix} · ${remaining}s`;
+    const bar = document.getElementById("ceremony-bar");
+    bar.style.transition = "none";
+    bar.style.width = (progress * 100) + "%";
+  }
+
+  function tickCeremonyProgress() {
+    if (lastCeremony && lastCeremony.active) updateCeremonyOverlay(lastCeremony);
+  }
 
   function drawPitch() {
     // Striped grass
@@ -604,6 +710,164 @@
     ctx.restore();
   }
 
+  function drawReferee(ref) {
+    if (!ref) return;
+    const x = ref.x, y = ref.y;
+    const r = 11;
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = "#000";
+    ctx.beginPath(); ctx.ellipse(x, y + r + 1, r * 0.85, 3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#ffd700";
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+    const stripeW = 2.2;
+    for (const offset of [-6, -2, 2, 6]) {
+      ctx.beginPath();
+      ctx.rect(x + offset - stripeW / 2, y - r * 0.85, stripeW, r * 1.7);
+      ctx.fill();
+    }
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = "#000";
+    ctx.font = "bold 8px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("REF", x, y + 2.5);
+    if (ref.armRaised > 0) {
+      const alpha = Math.min(1, ref.armRaised / 1.6);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "#ffd700";
+      ctx.font = "bold 14px sans-serif";
+      ctx.fillText("☝️", x, y - r - 6);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  let spectatorAnthemAudio = null;
+  let lastAnthemKey = "";
+
+  function syncSpectatorAnthem(ceremony, audioCfg) {
+    if (!ceremony || !ceremony.active) {
+      if (spectatorAnthemAudio) {
+        spectatorAnthemAudio.pause();
+        spectatorAnthemAudio = null;
+      }
+      lastAnthemKey = "";
+      return;
+    }
+    const key = `${ceremony.startedAt}-${ceremony.anthemSlug || ceremony.mode}`;
+    if (key === lastAnthemKey) return;
+    lastAnthemKey = key;
+    if (spectatorAnthemAudio) {
+      spectatorAnthemAudio.pause();
+      spectatorAnthemAudio = null;
+    }
+    if (!ceremony.anthemSlug) return;
+    const vol = Math.max(0, Math.min(1, audioCfg?.anthemVolume ?? 1));
+    const audio = new Audio(`/static/anthems/${ceremony.anthemSlug}.mp3`);
+    audio.volume = vol;
+    spectatorAnthemAudio = audio;
+    audio.play().catch(() => { /* autoplay policy */ });
+    const durMs = Math.max(1000, (ceremony.durationSec || 10) * 1000);
+    setTimeout(() => {
+      if (spectatorAnthemAudio === audio) {
+        audio.pause();
+        spectatorAnthemAudio = null;
+      }
+    }, durMs);
+  }
+
+  const TP_PINK = "#ff80ab";
+  const TP_PINK_DEEP = "#f50057";
+
+  function drawToiletKing(tk) {
+    if (!tk) return;
+    const { x, y, phase, direction, mode } = tk;
+    const alpha = tk.floatAlpha ?? 1;
+    if (alpha <= 0.02) return;
+    if (mode === "running" && (x < -70 || x > FIELD_W + 70)) return;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(x, y);
+    const face = direction >= 0 ? 1 : -1;
+    ctx.scale(face, 1);
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.ellipse(0, 15, 11, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = alpha;
+    if (mode === "running" || mode === "exiting") {
+      const trailLen = 52;
+      ctx.strokeStyle = TP_PINK;
+      ctx.lineWidth = 5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-6, -3);
+      for (let i = 0; i <= 10; i++) {
+        const tx = -10 - (i / 10) * trailLen;
+        const ty = -3 + Math.sin(phase + i * 0.75) * (2.5 + i * 0.35);
+        ctx.lineTo(tx, ty);
+      }
+      ctx.stroke();
+    }
+    const legSwing = mode === "running" ? Math.sin(phase) * 7 : Math.sin(phase * 0.4) * 2;
+    ctx.strokeStyle = "#283593";
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(-2, 7);
+    ctx.lineTo(-5 + legSwing, 15);
+    ctx.moveTo(2, 7);
+    ctx.lineTo(5 - legSwing, 15);
+    ctx.stroke();
+    ctx.fillStyle = "#6a1b9a";
+    ctx.fillRect(-5, -1, 10, 11);
+    ctx.fillStyle = "#ffd700";
+    ctx.fillRect(-5, -1, 10, 2.5);
+    ctx.fillStyle = "#ffcc80";
+    ctx.beginPath();
+    ctx.arc(0, -8, 5.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffd700";
+    ctx.beginPath();
+    ctx.moveTo(-5.5, -12);
+    ctx.lineTo(-3, -17);
+    ctx.lineTo(0, -14);
+    ctx.lineTo(3, -17);
+    ctx.lineTo(5.5, -12);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#ffcc80";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(4, 1);
+    ctx.lineTo(11, -6);
+    ctx.stroke();
+    const rx = 13, ry = -7;
+    ctx.fillStyle = TP_PINK;
+    ctx.beginPath();
+    ctx.ellipse(rx, ry, 4.2, 5.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = TP_PINK;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(rx - 3, ry);
+    ctx.quadraticCurveTo(5, -1, -6, -3);
+    ctx.stroke();
+    ctx.restore();
+    if (alpha > 0.15) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
+      ctx.font = "bold 8px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Beat Mörker", x, y - 24);
+      ctx.restore();
+    }
+  }
+
   function drawBall(ball) {
     // Halo
     const g = ctx.createRadialGradient(ball.x, ball.y, 0, ball.x, ball.y, BALL_RADIUS * 2.5);
@@ -645,6 +909,8 @@
       const color = p.team === "Red" ? "#ff1744" : "#00b0ff";
       drawPlayer(p, color, name);
     }
+    if (data.referee) drawReferee(data.referee);
+    drawToiletKing(data.toiletKing);
     drawBall(data.ball);
     drawPlane(ctx, data.plane);
   }
@@ -764,13 +1030,22 @@
     // Commentary
     updateCommentary(payload.commentaries);
 
+    // Ceremony (kickoff / winner anthem)
+    updateCeremonyOverlay(payload.ceremony);
+    syncSpectatorAnthem(payload.ceremony, payload.spectatorAudio);
+
     // Render pitch
     render(payload);
   }
 
+  function statePollUrl() {
+    const tok = new URLSearchParams(window.location.search).get("token") || "";
+    return tok ? `/api/state?token=${encodeURIComponent(tok)}` : "/api/state";
+  }
+
   async function poll() {
     try {
-      const r = await fetch("/api/state", { cache: "no-store" });
+      const r = await fetch(statePollUrl(), { cache: "no-store" });
       const json = await r.json();
 
       const liveTag = document.getElementById("live-tag");
@@ -966,6 +1241,7 @@
   // Start polling
   poll();
   setInterval(poll, POLL_INTERVAL_MS);
+  setInterval(tickCeremonyProgress, 100);
 
   // Prevent pull-to-refresh on mobile
   document.body.addEventListener("touchmove", (e) => {

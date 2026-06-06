@@ -14,12 +14,18 @@ import sys
 import time
 import json
 from typing import Dict, Any, Optional
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY")
 if not NVIDIA_API_KEY:
@@ -27,6 +33,7 @@ if not NVIDIA_API_KEY:
 
 NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 MODEL_ID = os.environ.get("MODEL_ID", "meta/llama-3.1-8b-instruct")
+STATE_TOKEN = os.environ.get("STATE_TOKEN", "").strip()
 
 app = FastAPI(title="PTE Aspire Football")
 
@@ -44,11 +51,26 @@ def log(msg: str):
 
 def extract_json(raw: str) -> Dict:
     cleaned = re.sub(r"```(?:json)?\s*", "", raw)
-    cleaned = re.sub(r"```", "", cleaned)
-    m = re.search(r"\{.*\}", cleaned, re.DOTALL)
-    if not m:
-        raise ValueError("no JSON object found")
-    return json.loads(m.group(0))
+    cleaned = re.sub(r"```", "", cleaned).strip()
+    decoder = json.JSONDecoder()
+    for i, ch in enumerate(cleaned):
+        if ch != "{":
+            continue
+        try:
+            obj, _ = decoder.raw_decode(cleaned[i:])
+            if isinstance(obj, dict):
+                return obj
+        except json.JSONDecodeError:
+            continue
+    m = re.search(r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}", cleaned, re.DOTALL)
+    if m:
+        return json.loads(m.group(0))
+    raise ValueError("no JSON object found")
+
+
+def _check_state_token(token: Optional[str]) -> None:
+    if STATE_TOKEN and token != STATE_TOKEN:
+        raise HTTPException(status_code=403, detail="invalid or missing state token")
 
 
 # =====================================================================
@@ -137,7 +159,8 @@ async def get_moves(req: MoveRequest):
         '* Midfielder at (200,300), ball at (400,200) -> {"x":4,"y":-3,"k":false} (chase ball)\n'
         '* Defender at (100,250), ball at (600,250) -> {"x":-1,"y":0,"k":false}  (ball far, hold)\n'
         '* Goalkeeper at (50,250), ball at (300,200) -> {"x":0,"y":-1,"k":false} (track ball Y only)\n\n'
-        "RULE OF THUMB: if ball.x > player.x set x positive; if ball.x < player.x set x negative.\n\n"
+        "RULE OF THUMB: if ball.x > player.x set x positive; if ball.x < player.x set x negative.\n"
+        "GOALKEEPERS: never leave your penalty zone. Track ball Y; only move toward ball X when it is in your half.\n\n"
         "PLAYER STRATEGIES:\n" + strategies
     )
     user = f"State: ball at {ball_pos}, players at {positions}. Output JSON now."
@@ -328,15 +351,28 @@ class StateUpdate(BaseModel):
     payload: Dict[str, Any]
 
 
+@app.get("/api/config")
+async def public_config():
+    return {
+        "model": MODEL_ID,
+        "stateAuthRequired": bool(STATE_TOKEN),
+    }
+
+
 @app.post("/api/state")
-async def update_state(req: StateUpdate):
+async def update_state(
+    req: StateUpdate,
+    x_state_token: Optional[str] = Header(None, alias="X-State-Token"),
+):
+    _check_state_token(x_state_token)
     _match_state["data"] = req.payload
     _match_state["ts"] = time.time()
     return {"ok": True}
 
 
 @app.get("/api/state")
-async def get_state():
+async def get_state(token: Optional[str] = Query(None)):
+    _check_state_token(token)
     return {
         "data": _match_state["data"],
         "ts": _match_state["ts"],

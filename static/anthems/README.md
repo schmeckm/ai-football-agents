@@ -78,3 +78,14 @@ Drop in at least:
 - Plus whatever nations the teams pick
 
 5 × ~300 kB = under 2 MB total. Nothing crazy.
+
+## Bundled in this repo
+
+These MP3s ship with the project (from [nationalanthems.info](https://nationalanthems.info)):
+
+- `ch.mp3` — Switzerland
+- `de.mp3` — Germany
+- `sg.mp3` — Singapore
+- `us.mp3` — USA
+
+Match setup sliders control how many seconds play at kickoff and after full time.

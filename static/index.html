@@ -125,6 +125,13 @@
     display: flex; gap: 14px; align-items: center;
   }
   .qr-container img { background: #fff; border-radius: 6px; padding: 4px; }
+  #qr-code {
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    background: #fff;
+  }
   .qr-text { flex: 1; min-width: 0; }
   .qr-text strong { color: #00e676; display: block; margin-bottom: 4px; }
   .qr-text code { display: block; word-break: break-all; font-size: 11px; color: #c0c4d0; background: #07080b; padding: 4px 8px; border-radius: 4px; margin-top: 6px; }
@@ -367,7 +374,7 @@
 
 <div id="halftime-overlay" class="modal-overlay">
   <div class="modal-card halftime">
-    <h1>⏸️ HALF TIME</h1>
+    <h1 id="ht-h1">⏸️ HALF TIME</h1>
     <div class="modal-result" id="halftime-result"></div>
     <p class="modal-hint">Halftime in the dressing room. Ball's back on the spot. Rethink the tactics, switch players around — then back out for the second half.</p>
     <button class="apply" id="ht-resume">▶️ Out for the second half</button>
@@ -376,7 +383,7 @@
 
 <div id="fulltime-overlay" class="modal-overlay">
   <div class="modal-card fulltime">
-    <h1>🏁 Full Time</h1>
+    <h1 id="ft-h1">🏁 Full Time</h1>
     <div class="modal-result" id="fulltime-result"></div>
     <div class="modal-winner" id="fulltime-winner"></div>
     <button class="apply" id="ft-new">▶️ New match</button>
@@ -406,24 +413,29 @@
     <div id="penalty-result"></div>
     <div style="margin-top: 14px">
       <button class="apply" id="pen-take">⚽ Take Penalty</button>
-      <button id="pen-close" style="display:none">Close</button>
+      <button class="apply" id="pen-close" style="display:none">🏁 Show result</button>
     </div>
   </div>
 </div>
 
-<div id="spectator-hint">Press <kbd>F</kbd> for fullscreen · <kbd>M</kbd> mute · <kbd>Space</kbd> kick off</div>
+<div id="spectator-hint">Press <kbd>F</kbd> for fullscreen · <kbd>M</kbd> mute · <kbd>Space</kbd> kick off · <kbd>E</kbd> end</div>
 
 <div id="app">
 
   <div class="panel">
-    <h1>⚽ PTE - Football Soccer - LLM Driven</h1>
-    <div class="subtitle">🇺🇸 FIFA World Cup 2026 · USA · Canada · Mexico</div>
+    <label id="ui-lang-label" for="ui_lang" style="font-size:13px;color:#8a90a6">🌐 Sprache</label>
+    <select id="ui_lang" style="margin-bottom:10px;max-width:160px">
+      <option value="de">Deutsch</option>
+      <option value="en">English</option>
+    </select>
+    <h1 id="page-title">⚽ PTE - Football Soccer - LLM Driven</h1>
+    <div class="subtitle" id="ui-subtitle">🇺🇸 FIFA World Cup 2026 · USA · Canada · Mexico</div>
 
     <details>
-      <summary>🏆 Match setup</summary>
+      <summary id="ui-match-setup">🏆 Match setup</summary>
       <div>
-        <div class="caption">Name your sides, pick nations, set the clock. Apply, and we kick off.</div>
-        <h3 style="margin-top:4px">Team A (left, attacks right goal)</h3>
+        <div class="caption" id="ui-setup-cap">Name your sides, pick nations, set the clock. Apply, and we kick off.</div>
+        <h3 style="margin-top:4px" id="ui-team-a">Team A (left, attacks right goal)</h3>
         <div class="row cols-3">
           <div><label>Name</label><input type="text" id="su_name_red"></div>
           <div><label>Nation</label><select id="su_nation_red"></select></div>
@@ -431,9 +443,9 @@
         </div>
         <label>🐢 Team A dynamics: <span id="su_dyn_red_val">1.0</span>× 🐎</label>
         <input type="range" id="su_dyn_red" min="0.5" max="2.0" step="0.1" value="1.0">
-        <button id="btn_preview_anthem_red" class="anthem-preview">🎵 Preview anthem (5s)</button>
+        <button id="btn_preview_anthem_red" class="anthem-preview">🎵 Preview anthem</button>
 
-        <h3>Team B (right, attacks left goal)</h3>
+        <h3 id="ui-team-b">Team B (right, attacks left goal)</h3>
         <div class="row cols-3">
           <div><label>Name</label><input type="text" id="su_name_blue"></div>
           <div><label>Nation</label><select id="su_nation_blue"></select></div>
@@ -441,9 +453,38 @@
         </div>
         <label>🐢 Team B dynamics: <span id="su_dyn_blue_val">1.0</span>× 🐎</label>
         <input type="range" id="su_dyn_blue" min="0.5" max="2.0" step="0.1" value="1.0">
-        <button id="btn_preview_anthem_blue" class="anthem-preview">🎵 Preview anthem (5s)</button>
+        <button id="btn_preview_anthem_blue" class="anthem-preview">🎵 Preview anthem</button>
+
+        <h3 id="ui-anthems-hdr">🎵 National anthems</h3>
+        <div class="caption" id="ui-anthems-cap">Kickoff plays both teams; full time plays the winner only. Use MP3s in <code>static/anthems/</code> for real recordings.</div>
+        <label>Kickoff anthem (each team): <span id="su_anthem_kickoff_val">10</span>s</label>
+        <input type="range" id="su_anthem_kickoff" min="5" max="45" step="5" value="10">
+        <label>Winner anthem: <span id="su_anthem_winner_val">15</span>s</label>
+        <input type="range" id="su_anthem_winner" min="5" max="60" step="5" value="15">
+        <label>Draw anthem</label>
+        <select id="su_draw_anthem">
+          <option value="none">None</option>
+          <option value="host">Host nation</option>
+          <option value="both">Both teams (short)</option>
+          <option value="fanfare">Fanfare</option>
+        </select>
+        <label id="ui-host-nation-lbl">Host nation (for draw)</label>
+        <select id="su_host_nation"></select>
+
+        <label id="ui-llm-label">AI reaction interval: <span id="su_llm_val">1.8</span>s</label>
+        <input type="range" id="su_llm_interval" min="1200" max="4000" step="200" value="1800">
+
         <label>Match duration: <span id="su_duration_val">90</span>s</label>
         <input type="range" id="su_duration" min="30" max="300" step="10" value="90">
+
+        <label>🔊 Stadium SFX: <span id="su_sfx_vol_val">100</span>%</label>
+        <input type="range" id="su_sfx_vol" min="0" max="100" step="5" value="100">
+        <label>🎵 Anthem volume: <span id="su_anthem_vol_val">100</span>%</label>
+        <input type="range" id="su_anthem_vol" min="0" max="100" step="5" value="100">
+
+        <label id="ui-state-token-lbl">🔒 Spectator token (optional)</label>
+        <input type="text" id="su_state_token" placeholder="same as server STATE_TOKEN" autocomplete="off">
+        <div class="caption" id="ui-token-cap">Protects /api/state from spoofing on the LAN</div>
 
         <h3>📢 Stadium banners</h3>
         <div class="row cols-3">
@@ -455,6 +496,15 @@
           <div><label>Bottom banner text</label><input type="text" id="su_banner_bot_text" placeholder="e.g. FIFA WORLD CUP 2026"></div>
           <div><label>Background</label><input type="color" id="su_banner_bot_bg" value="#1a1c23"></div>
           <div><label>Text color</label><input type="color" id="su_banner_bot_fg" value="#00e676"></div>
+        </div>
+
+        <h3>🧻 Beat Mörker</h3>
+        <div class="caption">Standardmäßig aus. Einschalten → Beat Mörker schwebt ins Spielfeld und flitzt mit pinkem Klopapier über den Rasen. Ausschalten → er schwebt wieder raus.</div>
+        <div class="row" style="grid-template-columns: auto 1fr; align-items: center; gap: 12px;">
+          <label style="margin: 0; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="checkbox" id="su_tk_enabled" style="width: 16px; height: 16px; accent-color: #ff80ab;">
+            <span>Beat Mörker aktivieren</span>
+          </label>
         </div>
 
         <h3>✈️ Sky banner (flying plane)</h3>
@@ -474,10 +524,10 @@
         <div id="setup_msg"></div>
 
         <div class="qr-container">
-          <img id="qr-code" alt="QR Code" width="120" height="120">
+          <canvas id="qr-code" width="80" height="80"></canvas>
           <div class="qr-text">
-            <strong>📱 Phone Spectator</strong>
-            Scan this QR code on a phone in the same network to watch read-only.
+            <strong id="ui-spectator-hdr">📱 Phone Spectator</strong>
+            <span id="ui-spectator-cap">Scan this QR code on a phone in the same network to watch read-only.</span>
             <code id="spectator-url"></code>
           </div>
         </div>
@@ -486,10 +536,13 @@
 
     <div id="api_error_box"></div>
 
-    <button id="btn_start_stop" style="margin-bottom:10px">▶️ Start match</button>
+    <div class="match-controls" style="display:flex;gap:8px;margin-bottom:10px">
+      <button id="btn_start_stop" style="flex:1">▶️ Start match</button>
+      <button id="btn_end_match" class="danger" style="flex:0.85" disabled title="Blow the final whistle — winner's anthem plays if there is a winner">🏁 End match</button>
+    </div>
 
-    <h2>Coach your team</h2>
-    <div class="caption">Four roles per side: Striker, Midfielder, Defender, Goalkeeper. Leave a prompt empty and that player sits on the bench.</div>
+    <h2 id="ui-coach">Coach your team</h2>
+    <div class="caption" id="ui-coach-cap">Four roles per side: Striker, Midfielder, Defender, Goalkeeper. Leave a prompt empty and that player sits on the bench.</div>
 
     <div class="tabs">
       <button class="tab active" data-team="Red" id="tab_red">🇨🇭 PTE Digital</button>
@@ -497,7 +550,7 @@
     </div>
 
     <div class="gen-box">
-      <h3>✨ Tactical Coach AI</h3>
+      <h3 id="ui-tactical">✨ Tactical Coach AI</h3>
       <div class="caption" style="margin-bottom: 8px">Tell the coach what you want — it writes a full game plan for the <strong id="gen-team-label">active team</strong>.</div>
       <div class="gen-row">
         <input type="text" id="gen_intent" placeholder="e.g. tiki-taka, park the bus, gegenpressing, total football...">
@@ -601,6 +654,8 @@
 
 </div>
 
+<script src="/static/qr.js"></script>
+<script src="/static/features.js"></script>
 <script>
 // =====================================================================
 // CONSTANTS
@@ -617,7 +672,9 @@ const PLAYER_SPEED_SCALE = 20;
 const KICK_POWER = 520;
 const BALL_FRICTION_PER_SEC = 0.55;
 const KICK_COOLDOWN_SEC = 0.25;
-const LLM_INTERVAL_MS = 1800;
+const DEFAULT_LLM_INTERVAL_MS = 1800;
+const SETUP_PREFS_KEY = "make-football-setup-prefs-v1";
+const STATE_TOKEN_KEY = "make-football-state-token-v1";
 const COMMENTARY_INTERVAL_MS = 14000;
 const STATE_PUSH_MS = 200;
 const HEATMAP_SAMPLE_MS = 250;
@@ -626,6 +683,9 @@ const REPLAY_FPS = 30;
 const REPLAY_DURATION_SEC = 3;
 const REPLAY_MAX_FRAMES = REPLAY_FPS * REPLAY_DURATION_SEC;
 const REPLAY_SPEED = 0.35;
+
+const DEFAULT_ANTHEM_KICKOFF_SEC = 10;
+const DEFAULT_ANTHEM_WINNER_SEC = 15;
 
 // Goalkeeper movement zones
 const GK_RED_X_MIN = 25, GK_RED_X_MAX = 110;
@@ -737,7 +797,13 @@ function buildPlayers() {
 // AUDIO
 // =====================================================================
 class AudioFX {
-  constructor() { this.ctx = null; this.muted = localStorage.getItem(MUTE_KEY) === "1"; }
+  constructor() {
+    this.ctx = null;
+    this.muted = localStorage.getItem(MUTE_KEY) === "1";
+    this.sfxVolume = 1;
+  }
+  setSfxVolume(v) { this.sfxVolume = Math.max(0, Math.min(1, v)); }
+  _sfxGain(base) { return this.muted ? 0 : base * this.sfxVolume; }
   ensureCtx() {
     if (!this.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) this.ctx = new AC(); }
     if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
@@ -764,7 +830,7 @@ class AudioFX {
     osc.frequency.setValueAtTime(2200, t);
     osc.frequency.exponentialRampToValueAtTime(2800, t + 0.25);
     gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(0.25, t + 0.03);
+    gain.gain.linearRampToValueAtTime(this._sfxGain(0.25), t + 0.03);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
     osc.connect(gain).connect(this.ctx.destination);
     osc.start(t); osc.stop(t + 0.45);
@@ -778,7 +844,7 @@ class AudioFX {
     for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i/data.length, 2);
     const noise = this.ctx.createBufferSource(); noise.buffer = buf;
     const filter = this.ctx.createBiquadFilter(); filter.type = "lowpass"; filter.frequency.value = 220;
-    const gain = this.ctx.createGain(); gain.gain.value = 0.35;
+    const gain = this.ctx.createGain(); gain.gain.value = this._sfxGain(0.35);
     noise.connect(filter).connect(gain).connect(this.ctx.destination); noise.start(t);
   }
   goal() {
@@ -789,7 +855,7 @@ class AudioFX {
       const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
       osc.type = "sawtooth"; osc.frequency.setValueAtTime(freq, t);
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.08, t + 0.05 + i * 0.05);
+      gain.gain.linearRampToValueAtTime(this._sfxGain(0.08), t + 0.05 + i * 0.05);
       gain.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
       osc.connect(gain).connect(this.ctx.destination);
       osc.start(t); osc.stop(t + 1.6);
@@ -803,11 +869,12 @@ class AudioFX {
     }
     const noise = this.ctx.createBufferSource(); noise.buffer = buf;
     const filter = this.ctx.createBiquadFilter(); filter.type = "bandpass"; filter.frequency.value = 900; filter.Q.value = 1.2;
-    const gain = this.ctx.createGain(); gain.gain.value = 0.35;
+    const gain = this.ctx.createGain(); gain.gain.value = this._sfxGain(0.35);
     noise.connect(filter).connect(gain).connect(this.ctx.destination); noise.start(t);
   }
 }
 const audioFX = new AudioFX();
+function anthemVolumeMul() { return Math.max(0, Math.min(1, state.anthemVolume ?? 1)); }
 
 // =====================================================================
 // ANTHEM PLAYER — short synthesized national anthem snippets via Web Audio
@@ -1010,17 +1077,69 @@ const FLAG_TO_ANTHEM_FILE = {
   "🏴󠁧󠁢󠁥󠁮󠁧󠁿": ["gb-eng", "england", "gb", "uk"],
 };
 
+// Lookup by nation name (reliable) — used for ceremony anthems
+const NATION_TO_ANTHEM_SLUGS = {
+  "Switzerland": ["ch", "switzerland"],
+  "Germany": ["de", "germany"],
+  "USA": ["us", "usa"],
+  "France": ["fr", "france"],
+  "England": ["gb-eng", "england", "gb", "uk"],
+  "Italy": ["it", "italy"],
+  "Spain": ["es", "spain"],
+  "Brazil": ["br", "brazil"],
+  "Argentina": ["ar", "argentina"],
+  "Japan": ["jp", "japan"],
+  "Netherlands": ["nl", "netherlands"],
+  "Portugal": ["pt", "portugal"],
+  "Belgium": ["be", "belgium"],
+  "Singapore": ["sg", "singapore"],
+  "Austria": ["at", "austria"],
+  "Mexico": ["mx", "mexico"],
+  "Sweden": ["se", "sweden"],
+  "Poland": ["pl", "poland"],
+  "Norway": ["no", "norway"],
+  "Denmark": ["dk", "denmark"],
+  "Croatia": ["hr", "croatia"],
+  "South Korea": ["kr", "south-korea"],
+};
+
+function getAnthemSlugsForNation(nationName) {
+  if (NATION_TO_ANTHEM_SLUGS[nationName]) return NATION_TO_ANTHEM_SLUGS[nationName];
+  const flag = NATIONS[nationName]?.flag;
+  if (flag && FLAG_TO_ANTHEM_FILE[flag]) return FLAG_TO_ANTHEM_FILE[flag];
+  const slug = nationName.toLowerCase().replace(/\s+/g, "-");
+  return [slug];
+}
+
 class AnthemPlayer {
   constructor() {
     this.stopped = false;
     this.activeOscs = [];
     this.activeGains = [];
     this.activeBufferSources = [];
+    this._waitTimer = null;
+    this._waitResolve = null;
     // Cache decoded MP3s and known-missing files so we don't re-fetch
     this.mp3Cache = new Map();  // slug -> AudioBuffer | "missing"
   }
+  _cancelWait() {
+    if (this._waitTimer) { clearTimeout(this._waitTimer); this._waitTimer = null; }
+    if (this._waitResolve) { const r = this._waitResolve; this._waitResolve = null; r(); }
+  }
+  async _wait(ms) {
+    if (this.stopped || ms <= 0) return;
+    await new Promise(resolve => {
+      this._waitResolve = resolve;
+      this._waitTimer = setTimeout(() => {
+        this._waitTimer = null;
+        this._waitResolve = null;
+        resolve();
+      }, ms);
+    });
+  }
   stop() {
     this.stopped = true;
+    this._cancelWait();
     const now = audioFX.ctx ? audioFX.ctx.currentTime : 0;
     for (const g of this.activeGains) {
       try { g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(g.gain.value, now); g.gain.linearRampToValueAtTime(0, now + 0.05); } catch(e){}
@@ -1036,8 +1155,8 @@ class AnthemPlayer {
 
   // Try to load and play an MP3 file from /static/anthems/.
   // Returns true if MP3 played, false if it should fall back to synth.
-  async _tryMp3(flag, targetDurationSec) {
-    const candidates = FLAG_TO_ANTHEM_FILE[flag];
+  async _tryMp3(flag, targetDurationSec, candidates = null) {
+    candidates = candidates || FLAG_TO_ANTHEM_FILE[flag];
     if (!candidates || candidates.length === 0) return false;
 
     const ctx = audioFX.ctx;
@@ -1075,6 +1194,7 @@ class AnthemPlayer {
       console.log(`[Anthem] No MP3 for ${flag} (tried: ${candidates.map(c => c + ".mp3").join(", ")}), using synth`);
       return false;
     }
+    if (this.stopped) return true;
 
     // Play with fade-in/out
     const source = ctx.createBufferSource();
@@ -1085,15 +1205,16 @@ class AnthemPlayer {
     const fadeOut = 0.4;
     const playLen = Math.min(targetDurationSec, audioBuffer.duration);
     gain.gain.setValueAtTime(0, startT);
-    gain.gain.linearRampToValueAtTime(0.85, startT + fadeIn);
-    gain.gain.setValueAtTime(0.85, startT + playLen - fadeOut);
+    const peak = 0.85 * anthemVolumeMul();
+    gain.gain.linearRampToValueAtTime(peak, startT + fadeIn);
+    gain.gain.setValueAtTime(peak, startT + playLen - fadeOut);
     gain.gain.linearRampToValueAtTime(0, startT + playLen);
 
     source.connect(gain).connect(ctx.destination);
     source.start(startT, 0, playLen + 0.1);
     this.activeBufferSources.push(source);
 
-    await new Promise(r => setTimeout(r, targetDurationSec * 1000));
+    await this._wait(targetDurationSec * 1000);
     return true;
   }
 
@@ -1114,7 +1235,7 @@ class AnthemPlayer {
       lpf.frequency.value = Math.min(4500, freq * 6);
       lpf.Q.value = 0.8;
       const gain = ctx.createGain();
-      const v = volume * l.gainMult;
+      const v = volume * l.gainMult * anthemVolumeMul();
       const attack = 0.05;
       const release = Math.min(0.12, duration * 0.3);
       gain.gain.setValueAtTime(0, startTime);
@@ -1132,7 +1253,7 @@ class AnthemPlayer {
   async _playSynth(flag, targetDurationSec) {
     const ctx = audioFX.ctx;
     if (!ctx) {
-      await new Promise(r => setTimeout(r, targetDurationSec * 1000));
+      await this._wait(targetDurationSec * 1000);
       return;
     }
     const notes = ANTHEMS[flag] || ANTHEMS["default"];
@@ -1142,7 +1263,6 @@ class AnthemPlayer {
     const scale = targetDurationSec / totalNoteDuration;
     console.log(`[Anthem] synth: ${notes.length} notes, scaled by ${scale.toFixed(2)}x`);
 
-    this.stopped = false;
     let t = ctx.currentTime + 0.08;
     for (const n of notes) {
       if (this.stopped) break;
@@ -1150,32 +1270,42 @@ class AnthemPlayer {
       this._playNote(ctx, n.f, t, dur, 0.18);
       t += dur;
     }
-    await new Promise(r => setTimeout(r, targetDurationSec * 1000));
+    await this._wait(targetDurationSec * 1000);
   }
 
-  async play(flag, targetDurationSec = 5) {
+  async play(flag, targetDurationSec = 5, mp3Candidates = null) {
     console.log(`[Anthem] play(${flag}, ${targetDurationSec}s) — muted: ${audioFX.muted}`);
+    this._cancelWait();
+    this.stopped = false;
     if (audioFX.muted) {
       console.log("[Anthem] muted — silent wait");
-      await new Promise(r => setTimeout(r, targetDurationSec * 1000));
+      await this._wait(targetDurationSec * 1000);
       return;
     }
     const ready = await audioFX.ensureCtxReady();
     if (!ready) {
       console.warn("[Anthem] AudioContext not ready");
-      await new Promise(r => setTimeout(r, targetDurationSec * 1000));
+      await this._wait(targetDurationSec * 1000);
       return;
     }
-    this.stopped = false;
+    if (this.stopped) return;
     this.activeOscs = [];
     this.activeGains = [];
     this.activeBufferSources = [];
 
-    // Try real MP3 first, fall back to synth
-    const playedMp3 = await this._tryMp3(flag, targetDurationSec);
-    if (!playedMp3 && !this.stopped) {
+    const playedMp3 = await this._tryMp3(flag, targetDurationSec, mp3Candidates);
+    if (this.stopped) return;
+    if (!playedMp3) {
       await this._playSynth(flag, targetDurationSec);
     }
+  }
+
+  async playForTeam(team, targetDurationSec = 5) {
+    const nation = team === "Red" ? state.teamRed.nation : state.teamBlue.nation;
+    const flag = NATIONS[nation]?.flag || "🏳️";
+    const slugs = getAnthemSlugsForNation(nation);
+    console.log(`[Anthem] playForTeam(${team}, nation=${nation}, slugs=${slugs.join(",")})`);
+    await this.play(flag, targetDurationSec, slugs);
   }
 }
 const anthemPlayer = new AnthemPlayer();
@@ -1507,7 +1637,7 @@ const state = {
   pendingResetAfterReplay: false,
   matchHighlights: [],   // array of {team, frames} — all goals of current match
   // Penalty shootout
-  shootout: { active: false, shooter: "Red", attempts: { Red: [], Blue: [] }, max: 5, finished: false },
+  shootout: { active: false, shooter: "Red", attempts: { Red: [], Blue: [] }, max: 5, finished: false, winnerTeam: null },
   // Stadium banners
   banners: {
     top:    { text: "ROCHE TAVERO",            bg: "#1a1c23", fg: "#ff1744" },
@@ -1520,6 +1650,19 @@ const state = {
     text: "PTE ASPIRE INNOVATION",
     bg: "#1a1c23",
     fg: "#ffd54f",
+  },
+  // Toilettenkönig — opt-in; floats in when activated
+  toiletKing: {
+    enabled: false,
+    active: false,
+    mode: "off",       // off | entering | running | exiting
+    entranceT: 0,
+    entranceDur: 2.8,
+    exitDur: 1.7,
+    floatAlpha: 1,
+    x: -80, baseY: 280, y: -50,
+    enterStartY: 42,
+    vx: 118, direction: 1, phase: 0,
   },
   // Live stats
   stats: {
@@ -1534,35 +1677,79 @@ const state = {
   lastStatePush: 0,
   // Referee — follows ball with diagonal offset
   referee: { x: FIELD_W / 2 - 80, y: FIELD_H / 2 + 80, armRaised: 0 },
-  // Match ceremony — line-up + anthems before kickoff
-  ceremony: { active: false, skipRequested: false },
+  anthemKickoffDuration: DEFAULT_ANTHEM_KICKOFF_SEC,
+  anthemWinnerDuration: DEFAULT_ANTHEM_WINNER_SEC,
+  drawAnthem: "none",
+  hostNation: "USA",
+  llmIntervalMs: DEFAULT_LLM_INTERVAL_MS,
+  sfxVolume: 1,
+  anthemVolume: 1,
+  // Match ceremony — line-up + anthems before kickoff / winner anthem at full time
+  ceremony: {
+    active: false, skipRequested: false,
+    mode: null, team: null, teamName: "", teamColor: "", flag: "",
+    nationName: "", anthemSlug: "",
+    statusPrefix: "", durationSec: 0, startedAt: 0,
+  },
+  matchEnding: false,
+  kickoffCeremonyDone: false,
 };
 
 // =====================================================================
 // QR CODE
 // =====================================================================
 function initQRCode() {
-  const url = window.location.origin + "/spectator";
+  const url = PTEFeatures.spectatorUrl();
   document.getElementById("spectator-url").textContent = url;
-  // Use external QR API with fallback
-  const img = document.getElementById("qr-code");
-  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&margin=4&data=${encodeURIComponent(url)}`;
-  img.onerror = () => {
-    img.style.display = "none";
-    const wrap = img.parentElement;
-    const fallback = document.createElement("div");
-    fallback.style.cssText = "width:120px;height:120px;background:#1a1c23;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#8a90a6;font-size:11px;text-align:center;padding:8px;";
-    fallback.textContent = "QR offline. Use URL below ↓";
-    wrap.insertBefore(fallback, img);
-  };
+  const canvas = document.getElementById("qr-code");
+  if (!PTEFeatures.drawOfflineQR(canvas, url)) {
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#1a1c23";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#8a90a6";
+    ctx.font = "11px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("QR unavailable", 40, 36);
+    ctx.fillText("Use URL below", 40, 50);
+  }
+}
+
+function loadSetupPrefs() {
+  try {
+    const prefs = JSON.parse(localStorage.getItem(SETUP_PREFS_KEY) || "{}");
+    if (prefs.llmIntervalMs) state.llmIntervalMs = prefs.llmIntervalMs;
+    if (prefs.drawAnthem) state.drawAnthem = prefs.drawAnthem;
+    if (prefs.hostNation) state.hostNation = prefs.hostNation;
+    if (prefs.sfxVolume != null) state.sfxVolume = prefs.sfxVolume;
+    if (prefs.anthemVolume != null) state.anthemVolume = prefs.anthemVolume;
+  } catch { /* ignore */ }
+  const tok = localStorage.getItem(STATE_TOKEN_KEY) || "";
+  if (tok) document.getElementById("su_state_token").value = tok;
+  audioFX.setSfxVolume(state.sfxVolume);
+}
+
+function saveSetupPrefs() {
+  localStorage.setItem(SETUP_PREFS_KEY, JSON.stringify({
+    llmIntervalMs: state.llmIntervalMs,
+    drawAnthem: state.drawAnthem,
+    hostNation: state.hostNation,
+    sfxVolume: state.sfxVolume,
+    anthemVolume: state.anthemVolume,
+  }));
+  const tok = document.getElementById("su_state_token").value.trim();
+  if (tok) localStorage.setItem(STATE_TOKEN_KEY, tok);
+  else localStorage.removeItem(STATE_TOKEN_KEY);
+  initQRCode();
 }
 
 // =====================================================================
 // SETUP UI
 // =====================================================================
 function populateNationDropdowns() {
-  for (const id of ["su_nation_red", "su_nation_blue"]) {
-    const sel = document.getElementById(id); sel.innerHTML = "";
+  for (const id of ["su_nation_red", "su_nation_blue", "su_host_nation"]) {
+    const sel = document.getElementById(id);
+    if (!sel) continue;
+    sel.innerHTML = "";
     for (const [name, info] of Object.entries(NATIONS)) {
       const opt = document.createElement("option");
       opt.value = name; opt.textContent = `${info.flag} ${name}`;
@@ -1580,6 +1767,11 @@ function loadSetupFromState() {
   document.getElementById("su_color_blue").value = state.teamBlue.color;
   document.getElementById("su_duration").value   = state.matchDuration;
   document.getElementById("su_duration_val").textContent = state.matchDuration;
+  document.getElementById("su_anthem_kickoff").value = state.anthemKickoffDuration;
+  document.getElementById("su_anthem_kickoff_val").textContent = state.anthemKickoffDuration;
+  document.getElementById("su_anthem_winner").value = state.anthemWinnerDuration;
+  document.getElementById("su_anthem_winner_val").textContent = state.anthemWinnerDuration;
+  updateAnthemPreviewLabels();
   document.getElementById("su_dyn_red").value    = state.teamRed.dynamics ?? 1.0;
   document.getElementById("su_dyn_red_val").textContent  = (state.teamRed.dynamics ?? 1.0).toFixed(1);
   document.getElementById("su_dyn_blue").value   = state.teamBlue.dynamics ?? 1.0;
@@ -1590,10 +1782,19 @@ function loadSetupFromState() {
   document.getElementById("su_banner_bot_text").value = state.banners.bottom.text;
   document.getElementById("su_banner_bot_bg").value   = state.banners.bottom.bg;
   document.getElementById("su_banner_bot_fg").value   = state.banners.bottom.fg;
+  document.getElementById("su_tk_enabled").checked = state.toiletKing.enabled;
   document.getElementById("su_plane_enabled").checked = state.plane.enabled;
   document.getElementById("su_plane_text").value      = state.plane.text;
   document.getElementById("su_plane_bg").value        = state.plane.bg;
   document.getElementById("su_plane_fg").value        = state.plane.fg;
+  document.getElementById("su_draw_anthem").value     = state.drawAnthem;
+  document.getElementById("su_host_nation").value     = state.hostNation;
+  document.getElementById("su_llm_interval").value    = state.llmIntervalMs;
+  document.getElementById("su_llm_val").textContent  = (state.llmIntervalMs / 1000).toFixed(1);
+  document.getElementById("su_sfx_vol").value         = Math.round(state.sfxVolume * 100);
+  document.getElementById("su_sfx_vol_val").textContent = Math.round(state.sfxVolume * 100);
+  document.getElementById("su_anthem_vol").value      = Math.round(state.anthemVolume * 100);
+  document.getElementById("su_anthem_vol_val").textContent = Math.round(state.anthemVolume * 100);
   applyBannersToUI();
 }
 
@@ -1683,16 +1884,32 @@ function renderCrowd() {
   paint(document.getElementById("crowd-bottom"), 67890);
 }
 
+function syncTeamsFromUI() {
+  state.teamRed.name     = document.getElementById("su_name_red").value.trim() || "Team A";
+  state.teamRed.nation   = document.getElementById("su_nation_red").value;
+  state.teamRed.color    = document.getElementById("su_color_red").value;
+  state.teamRed.dynamics = parseFloat(document.getElementById("su_dyn_red").value);
+  state.teamBlue.name     = document.getElementById("su_name_blue").value.trim() || "Team B";
+  state.teamBlue.nation   = document.getElementById("su_nation_blue").value;
+  state.teamBlue.color    = document.getElementById("su_color_blue").value;
+  state.teamBlue.dynamics = parseFloat(document.getElementById("su_dyn_blue").value);
+  state.anthemKickoffDuration = parseInt(document.getElementById("su_anthem_kickoff").value, 10);
+  state.anthemWinnerDuration  = parseInt(document.getElementById("su_anthem_winner").value, 10);
+  state.drawAnthem = document.getElementById("su_draw_anthem").value;
+  state.hostNation = document.getElementById("su_host_nation").value;
+  state.llmIntervalMs = parseInt(document.getElementById("su_llm_interval").value, 10);
+  state.sfxVolume = parseInt(document.getElementById("su_sfx_vol").value, 10) / 100;
+  state.anthemVolume = parseInt(document.getElementById("su_anthem_vol").value, 10) / 100;
+  audioFX.setSfxVolume(state.sfxVolume);
+  saveSetupPrefs();
+  syncTeamFlags();
+  renderTabs();
+  renderStats();
+}
+
 function applySetup() {
-  const nameRed    = (document.getElementById("su_name_red").value.trim()  || "Team A");
-  const nameBlue   = (document.getElementById("su_name_blue").value.trim() || "Team B");
-  const nationRed  = document.getElementById("su_nation_red").value;
-  const nationBlue = document.getElementById("su_nation_blue").value;
-  const colorRed   = document.getElementById("su_color_red").value;
-  const colorBlue  = document.getElementById("su_color_blue").value;
-  const duration   = parseInt(document.getElementById("su_duration").value, 10);
-  const dynRed     = parseFloat(document.getElementById("su_dyn_red").value);
-  const dynBlue    = parseFloat(document.getElementById("su_dyn_blue").value);
+  syncTeamsFromUI();
+  const duration = parseInt(document.getElementById("su_duration").value, 10);
 
   state.banners = {
     top: {
@@ -1713,10 +1930,9 @@ function applySetup() {
     bg:   document.getElementById("su_plane_bg").value,
     fg:   document.getElementById("su_plane_fg").value,
   };
+  syncToiletKingFromCheckbox();
   applyBannersToUI();
 
-  state.teamRed  = { name: nameRed,  nation: nationRed,  color: colorRed,  dynamics: dynRed };
-  state.teamBlue = { name: nameBlue, nation: nationBlue, color: colorBlue, dynamics: dynBlue };
   state.matchDuration = duration; state.timeLeft = duration;
   state.score = { Red: 0, Blue: 0 }; state.autoplay = false;
   state.ball = { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 };
@@ -1729,10 +1945,14 @@ function applySetup() {
   state.stats = { possessionTicks: {Red: 0, Blue: 0}, kicks: {Red: 0, Blue: 0}, shots: {Red: 0, Blue: 0} };
   state.heatmap = {};
   state.matchHighlights = [];
-  state.shootout = { active: false, shooter: "Red", attempts: { Red: [], Blue: [] }, max: 5, finished: false };
+  state.shootout = { active: false, shooter: "Red", attempts: { Red: [], Blue: [] }, max: 5, finished: false, winnerTeam: null };
+  state.matchEnding = false;
+  state.kickoffCeremonyDone = false;
 
   renderTabs(); renderPrompts(); renderScore(); renderStartStop();
   renderApiError(); renderCommentaries(); renderGenTeamLabel(); renderStats();
+  updateAnthemPreviewLabels();
+  saveSetupPrefs();
   document.getElementById("setup_msg").innerHTML = '<div class="success">Teams locked in. Press Start when you&rsquo;re ready to kick off.</div>';
   setTimeout(() => { document.getElementById("setup_msg").innerHTML = ""; }, 3500);
 }
@@ -1812,6 +2032,13 @@ function saveCurrentStrategy(name) {
     saved: new Date().toISOString(),
     teamRed: { ...state.teamRed }, teamBlue: { ...state.teamBlue },
     matchDuration: state.matchDuration,
+    anthemKickoffDuration: state.anthemKickoffDuration,
+    anthemWinnerDuration: state.anthemWinnerDuration,
+    drawAnthem: state.drawAnthem,
+    hostNation: state.hostNation,
+    llmIntervalMs: state.llmIntervalMs,
+    sfxVolume: state.sfxVolume,
+    anthemVolume: state.anthemVolume,
     prompts: Object.fromEntries(Object.entries(state.players).map(([n, p]) => [n, p.prompt])),
   };
   saveStrategiesAll(all); renderStrategyLibrary();
@@ -1822,7 +2049,16 @@ function loadStrategyByName(name) {
   const all = loadStrategies(); const s = all[name];
   if (!s) return;
   state.teamRed = { ...s.teamRed }; state.teamBlue = { ...s.teamBlue };
+  syncTeamFlags();
   state.matchDuration = s.matchDuration; state.timeLeft = s.matchDuration;
+  if (s.anthemKickoffDuration) state.anthemKickoffDuration = s.anthemKickoffDuration;
+  if (s.anthemWinnerDuration)  state.anthemWinnerDuration  = s.anthemWinnerDuration;
+  if (s.drawAnthem) state.drawAnthem = s.drawAnthem;
+  if (s.hostNation) state.hostNation = s.hostNation;
+  if (s.llmIntervalMs) state.llmIntervalMs = s.llmIntervalMs;
+  if (s.sfxVolume != null) state.sfxVolume = s.sfxVolume;
+  if (s.anthemVolume != null) state.anthemVolume = s.anthemVolume;
+  audioFX.setSfxVolume(state.sfxVolume);
   state.score = { Red: 0, Blue: 0 }; state.autoplay = false;
   state.ball = { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 };
   state.ballTrail = []; state.players = buildPlayers();
@@ -2337,7 +2573,8 @@ async function pushStateToServer() {
       replayFrame = state.replay.frames[idx];
     }
     await fetch("/api/state", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST",
+      headers: PTEFeatures.stateFetchHeaders(),
       body: JSON.stringify({
         payload: {
           ball: { x: state.ball.x, y: state.ball.y },
@@ -2346,6 +2583,11 @@ async function pushStateToServer() {
           score: state.score, timeLeft: state.timeLeft,
           teamRed: state.teamRed, teamBlue: state.teamBlue,
           autoplay: state.autoplay,
+          referee: {
+            x: state.referee.x,
+            y: state.referee.y,
+            armRaised: state.referee.armRaised,
+          },
           stats: {
             possession: getPossessionPct(),
             kicks: state.stats.kicks, shots: state.stats.shots,
@@ -2364,6 +2606,28 @@ async function pushStateToServer() {
             x: state.plane.x, y: state.plane.y,
             text: state.plane.text, bg: state.plane.bg, fg: state.plane.fg,
           } : null,
+          toiletKing: state.toiletKing.active ? {
+            x: state.toiletKing.x,
+            y: state.toiletKing.y,
+            phase: state.toiletKing.phase,
+            direction: state.toiletKing.direction,
+            mode: state.toiletKing.mode,
+            floatAlpha: state.toiletKing.floatAlpha,
+          } : null,
+          spectatorAudio: { anthemVolume: state.anthemVolume },
+          ceremony: state.ceremony.active ? {
+            active: true,
+            mode: state.ceremony.mode,
+            team: state.ceremony.team,
+            teamName: state.ceremony.teamName,
+            teamColor: state.ceremony.teamColor,
+            flag: state.ceremony.flag,
+            nationName: state.ceremony.nationName,
+            anthemSlug: state.ceremony.anthemSlug,
+            statusPrefix: state.ceremony.statusPrefix,
+            durationSec: state.ceremony.durationSec,
+            startedAt: state.ceremony.startedAt,
+          } : { active: false },
         }
       }),
     });
@@ -2474,6 +2738,220 @@ function drawPlane(ctx) {
   ctx.textBaseline = "alphabetic";
 
   ctx.restore();
+}
+
+// =====================================================================
+// TOILETTENKÖNIG — pink TP roll streaker across the pitch
+// =====================================================================
+const TP_PINK = "#ff80ab";
+const TP_PINK_DEEP = "#f50057";
+const TOILET_KING_NAME = "Beat Mörker";
+
+function activateToiletKing() {
+  const tk = state.toiletKing;
+  tk.enabled = true;
+  tk.active = true;
+  tk.mode = "entering";
+  tk.entranceT = 0;
+  tk.floatAlpha = 1;
+  tk.direction = 1;
+  tk.phase = 0;
+  tk.x = -82;
+  tk.enterStartY = 38 + Math.random() * 28;
+  tk.baseY = 140 + Math.random() * 260;
+  tk.y = tk.enterStartY;
+  document.getElementById("su_tk_enabled").checked = true;
+}
+
+function deactivateToiletKing() {
+  const tk = state.toiletKing;
+  tk.enabled = false;
+  document.getElementById("su_tk_enabled").checked = false;
+  if (tk.active && tk.mode !== "exiting") {
+    tk.mode = "exiting";
+    tk.entranceT = 0;
+    tk.exitStartY = tk.y;
+    tk.exitTargetY = -58;
+  } else if (!tk.active) {
+    tk.mode = "off";
+  }
+}
+
+function syncToiletKingFromCheckbox() {
+  const on = document.getElementById("su_tk_enabled").checked;
+  if (on && !state.toiletKing.active) activateToiletKing();
+  else if (!on && state.toiletKing.active) deactivateToiletKing();
+}
+
+function updateToiletKing(dt) {
+  const tk = state.toiletKing;
+  if (!tk.active) return;
+  tk.phase += dt * 14;
+
+  if (tk.mode === "entering") {
+    tk.entranceT += dt;
+    const p = Math.min(1, tk.entranceT / tk.entranceDur);
+    const ease = 1 - Math.pow(1 - p, 2.4);
+    tk.x = -82 + ease * (150 - (-82));
+    tk.y = tk.enterStartY + (tk.baseY - tk.enterStartY) * ease + Math.sin(tk.phase * 1.1) * 10 * (1 - p * 0.6);
+    tk.floatAlpha = Math.min(1, p * 1.4);
+    if (p >= 1) {
+      tk.mode = "running";
+      tk.x = 150;
+      tk.y = tk.baseY;
+      tk.floatAlpha = 1;
+    }
+    return;
+  }
+
+  if (tk.mode === "exiting") {
+    tk.entranceT += dt;
+    const p = Math.min(1, tk.entranceT / tk.exitDur);
+    const ease = p * p;
+    tk.y = tk.exitStartY + (tk.exitTargetY - tk.exitStartY) * ease + Math.sin(tk.phase) * 5 * (1 - p);
+    tk.x += tk.vx * tk.direction * 0.25 * dt;
+    tk.floatAlpha = 1 - ease;
+    if (p >= 1) {
+      tk.active = false;
+      tk.mode = "off";
+      tk.floatAlpha = 1;
+    }
+    return;
+  }
+
+  if (tk.mode === "running") {
+    tk.y = tk.baseY + Math.sin(tk.phase * 0.65) * 16;
+    tk.x += tk.vx * tk.direction * dt;
+    if (tk.direction > 0 && tk.x > FIELD_W + 58) {
+      tk.x = -58;
+      tk.baseY = 130 + Math.random() * 270;
+      if (Math.random() < 0.4) tk.direction = -1;
+    } else if (tk.direction < 0 && tk.x < -58) {
+      tk.x = FIELD_W + 58;
+      tk.baseY = 130 + Math.random() * 270;
+      if (Math.random() < 0.4) tk.direction = 1;
+    }
+  }
+}
+
+function drawToiletKing(ctx, tk) {
+  if (!tk || !tk.active) return;
+  const { x, y, phase, direction, mode } = tk;
+  const alpha = tk.floatAlpha ?? 1;
+  if (alpha <= 0.02) return;
+  if (mode === "running" && (x < -70 || x > FIELD_W + 70)) return;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x, y);
+  const face = direction >= 0 ? 1 : -1;
+  const scale = mode === "entering" ? 0.72 + (tk.entranceT / tk.entranceDur) * 0.28 : 1;
+  ctx.scale(face * scale, scale);
+
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = "#000";
+  ctx.beginPath();
+  ctx.ellipse(0, 15, 11, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  if (mode === "running" || mode === "exiting") {
+    const trailLen = 52;
+    ctx.strokeStyle = TP_PINK;
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(-6, -3);
+    for (let i = 0; i <= 10; i++) {
+      const tx = -10 - (i / 10) * trailLen;
+      const ty = -3 + Math.sin(phase + i * 0.75) * (2.5 + i * 0.35);
+      ctx.lineTo(tx, ty);
+    }
+    ctx.stroke();
+    ctx.fillStyle = TP_PINK_DEEP;
+    for (let i = 1; i < 10; i++) {
+      const tx = -10 - (i / 10) * trailLen;
+      const ty = -3 + Math.sin(phase + i * 0.75) * (2.5 + i * 0.35);
+      ctx.beginPath();
+      ctx.arc(tx, ty, 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  const legSwing = mode === "running" ? Math.sin(phase) * 7 : Math.sin(phase * 0.4) * 2;
+  ctx.strokeStyle = "#283593";
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-2, 7);
+  ctx.lineTo(-5 + legSwing, mode === "running" ? 15 : 12);
+  ctx.moveTo(2, 7);
+  ctx.lineTo(5 - legSwing, mode === "running" ? 15 : 12);
+  ctx.stroke();
+
+  ctx.fillStyle = "#6a1b9a";
+  ctx.fillRect(-5, -1, 10, 11);
+  ctx.fillStyle = "#ffd700";
+  ctx.fillRect(-5, -1, 10, 2.5);
+
+  ctx.fillStyle = "#ffcc80";
+  ctx.beginPath();
+  ctx.arc(0, -8, 5.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#ffd700";
+  ctx.beginPath();
+  ctx.moveTo(-5.5, -12);
+  ctx.lineTo(-3, -17);
+  ctx.lineTo(0, -14);
+  ctx.lineTo(3, -17);
+  ctx.lineTo(5.5, -12);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#e65100";
+  for (const cx of [-3, 0, 3]) {
+    ctx.beginPath();
+    ctx.arc(cx, cx === 0 ? -15.5 : -14.5, 1.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.strokeStyle = "#ffcc80";
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(4, 1);
+  ctx.lineTo(11, -6);
+  ctx.stroke();
+
+  const rx = 13, ry = -7;
+  ctx.fillStyle = TP_PINK;
+  ctx.beginPath();
+  ctx.ellipse(rx, ry, 4.2, 5.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = TP_PINK_DEEP;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = "#fce4ec";
+  ctx.beginPath();
+  ctx.ellipse(rx, ry, 1.6, 2.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = TP_PINK;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(rx - 3, ry);
+  ctx.quadraticCurveTo(5, -1, -6, -3);
+  ctx.stroke();
+
+  ctx.restore();
+
+  if (alpha > 0.15) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.font = "bold 8px 'Inter', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(TOILET_KING_NAME, x, y - 24);
+    ctx.restore();
+  }
 }
 
 // =====================================================================
@@ -2614,6 +3092,7 @@ function renderPitch() {
 
   // Sky banner — always visible (even during replay)
   drawPlane(ctx);
+  drawToiletKing(ctx, state.toiletKing.active ? state.toiletKing : null);
 
   ctx.globalAlpha = 1;
   confetti.render(ctx);
@@ -2676,25 +3155,65 @@ function renderStats() {
   blueBar.textContent = pp.Blue >= 10 ? pp.Blue + "%" : "";
 }
 
+function syncTeamFlags() {
+  state.teamRed.flag  = NATIONS[state.teamRed.nation]?.flag  || "🔴";
+  state.teamBlue.flag = NATIONS[state.teamBlue.nation]?.flag || "🔵";
+}
+
+function getTeamFlag(team) {
+  return team === "Red"
+    ? (state.teamRed.flag || NATIONS[state.teamRed.nation]?.flag || "🔴")
+    : (state.teamBlue.flag || NATIONS[state.teamBlue.nation]?.flag || "🔵");
+}
+
+function isMatchInProgress() {
+  return state.autoplay
+    || (state.timeLeft > 0 && state.timeLeft < state.matchDuration)
+    || state.score.Red > 0
+    || state.score.Blue > 0
+    || state.replay.active;
+}
+
+function getMatchWinner() {
+  if (state.shootout.finished && state.shootout.winnerTeam) return state.shootout.winnerTeam;
+  if (state.score.Red > state.score.Blue) return "Red";
+  if (state.score.Blue > state.score.Red) return "Blue";
+  return null;
+}
+
 function renderStartStop() {
   const btn = document.getElementById("btn_start_stop");
+  const t = (k) => (typeof PTEFeatures !== "undefined" ? PTEFeatures.t(k) : k);
   const wasOver = state.timeLeft <= 0;
   const midMatch = !state.autoplay && state.timeLeft > 0 && state.timeLeft < state.matchDuration;
   if (state.autoplay) {
-    btn.textContent = "⏸️ Pause match";
+    btn.textContent = t("pause");
     btn.classList.add("primary");
   } else if (midMatch) {
-    btn.textContent = "▶️ Resume match";
+    btn.textContent = t("resume");
     btn.classList.remove("primary");
   } else if (wasOver) {
-    btn.textContent = "▶️ New match";
+    btn.textContent = t("new_match");
     btn.classList.remove("primary");
   } else {
-    btn.textContent = "▶️ Start match";
+    btn.textContent = t("start");
     btn.classList.remove("primary");
   }
+  renderEndMatchButton();
 }
-function renderApiError() { document.getElementById("api_error_box").innerHTML = state.apiError ? `<div class="error">⚠️ API error: ${state.apiError}</div>` : ""; }
+
+function renderEndMatchButton() {
+  const btn = document.getElementById("btn_end_match");
+  if (!btn) return;
+  const canEnd = isMatchInProgress() && !state.ceremony.active && !state.matchEnding && state.timeLeft > 0;
+  btn.disabled = !canEnd;
+  btn.style.opacity = canEnd ? "1" : "0.45";
+  btn.style.cursor = canEnd ? "pointer" : "not-allowed";
+}
+function renderApiError() {
+  document.getElementById("api_error_box").innerHTML = state.apiError
+    ? `<div class="error">⚠️ API error: ${escapeHTML(state.apiError)}</div>` : "";
+}
 function renderMuteButton() { document.getElementById("btn-mute").textContent = audioFX.muted ? "🔇" : "🔊"; }
 
 // =====================================================================
@@ -2715,7 +3234,7 @@ function startPenaltyShootout() {
   state.shootout = {
     active: true, shooter: "Red",
     attempts: { Red: [], Blue: [] },
-    max: 5, finished: false,
+    max: 5, finished: false, winnerTeam: null,
   };
   document.getElementById("penalty-result").textContent = "";
   document.getElementById("penalty-result").className = "";
@@ -2791,9 +3310,11 @@ function takePenalty() {
     const winner = penaltyWinner();
     if (winner) {
       so.finished = true;
+      so.winnerTeam = winner;
       const wName = winner === "Red" ? state.teamRed.name : state.teamBlue.name;
       const wColor = winner === "Red" ? state.teamRed.color : state.teamBlue.color;
       resEl.innerHTML = `🏆 ${escapeHTML(wName)} win the shootout!`;
+      runWinnerCeremony(winner);
       resEl.className = "winner";
       resEl.style.color = wColor;
       document.getElementById("penalty-current").textContent = "";
@@ -2892,8 +3413,9 @@ function showFullTime() {
     <span style="color:#fff"> ${state.score.Red} : ${state.score.Blue} </span>
     <span style="color:${state.teamBlue.color}">${escapeHTML(state.teamBlue.name)} ${bf}</span>`;
   let winnerText, winnerColor;
-  if (state.score.Red > state.score.Blue) { winnerText = `🏆 ${state.teamRed.name} wins!`; winnerColor = state.teamRed.color; }
-  else if (state.score.Blue > state.score.Red) { winnerText = `🏆 ${state.teamBlue.name} wins!`; winnerColor = state.teamBlue.color; }
+  const winner = getMatchWinner();
+  if (winner === "Red") { winnerText = `🏆 ${state.teamRed.name} wins!`; winnerColor = state.teamRed.color; }
+  else if (winner === "Blue") { winnerText = `🏆 ${state.teamBlue.name} wins!`; winnerColor = state.teamBlue.color; }
   else { winnerText = "🤝 Draw — penalties?"; winnerColor = "#b388ff"; }
   winnerEl.textContent = winnerText; winnerEl.style.color = winnerColor;
 
@@ -2902,7 +3424,7 @@ function showFullTime() {
     state.matchHighlights.length > 0 ? "inline-block" : "none";
   // Show Penalty Shootout button only on a draw (and not already decided by penalties)
   document.getElementById("ft-penalty").style.display =
-    (state.score.Red === state.score.Blue) ? "inline-block" : "none";
+    (state.score.Red === state.score.Blue && !state.shootout.finished) ? "inline-block" : "none";
 
   overlay.classList.add("show");
 }
@@ -2936,13 +3458,8 @@ function loop(now) {
       fetchCommentary("halftime");
       setTimeout(showHalftime, 500);
     }
-    else if (state.timeLeft <= 0) {
-      state.autoplay = false;
-      renderStartStop();
-      audioFX.doubleWhistle();
-      fetchCommentary("fulltime");
-      recordMatch();
-      setTimeout(showFullTime, 800);
+    else if (state.timeLeft <= 0 && !state.matchRecorded && !state.matchEnding) {
+      endMatch({ manual: false });
     }
   } else {
     confetti.update(dt);
@@ -2952,10 +3469,11 @@ function loop(now) {
   renderScore();
   renderStats();
 
-  // Sky banner always flies, even during replay/pause
+  // Sky banner + Toilettenkönig — even during replay/pause
   updatePlane(dt);
+  updateToiletKing(dt);
 
-  if (!state.replay.active && state.autoplay && state.timeLeft > 0 && now - state.lastLLMCall > LLM_INTERVAL_MS) {
+  if (!state.replay.active && state.autoplay && state.timeLeft > 0 && now - state.lastLLMCall > state.llmIntervalMs) {
     state.lastLLMCall = now;
     fetchMoves();
   }
@@ -2980,6 +3498,41 @@ document.getElementById("btn_apply").addEventListener("click", applySetup);
 document.getElementById("su_duration").addEventListener("input", (e) => {
   document.getElementById("su_duration_val").textContent = e.target.value;
 });
+document.getElementById("su_anthem_kickoff").addEventListener("input", (e) => {
+  state.anthemKickoffDuration = parseInt(e.target.value, 10);
+  document.getElementById("su_anthem_kickoff_val").textContent = e.target.value;
+  updateAnthemPreviewLabels();
+});
+document.getElementById("su_anthem_winner").addEventListener("input", (e) => {
+  state.anthemWinnerDuration = parseInt(e.target.value, 10);
+  document.getElementById("su_anthem_winner_val").textContent = e.target.value;
+});
+document.getElementById("su_llm_interval").addEventListener("input", (e) => {
+  state.llmIntervalMs = parseInt(e.target.value, 10);
+  document.getElementById("su_llm_val").textContent = (state.llmIntervalMs / 1000).toFixed(1);
+  saveSetupPrefs();
+});
+document.getElementById("su_draw_anthem").addEventListener("change", (e) => {
+  state.drawAnthem = e.target.value;
+  saveSetupPrefs();
+});
+document.getElementById("su_host_nation").addEventListener("change", (e) => {
+  state.hostNation = e.target.value;
+  saveSetupPrefs();
+});
+document.getElementById("su_sfx_vol").addEventListener("input", (e) => {
+  state.sfxVolume = parseInt(e.target.value, 10) / 100;
+  document.getElementById("su_sfx_vol_val").textContent = e.target.value;
+  audioFX.setSfxVolume(state.sfxVolume);
+  saveSetupPrefs();
+});
+document.getElementById("su_anthem_vol").addEventListener("input", (e) => {
+  state.anthemVolume = parseInt(e.target.value, 10) / 100;
+  document.getElementById("su_anthem_vol_val").textContent = e.target.value;
+  saveSetupPrefs();
+});
+document.getElementById("su_state_token").addEventListener("change", saveSetupPrefs);
+document.getElementById("su_state_token").addEventListener("blur", saveSetupPrefs);
 
 // Dynamics sliders — apply live, no need for Apply button
 document.getElementById("su_dyn_red").addEventListener("input", (e) => {
@@ -3008,6 +3561,10 @@ document.getElementById("su_dyn_blue").addEventListener("input", (e) => {
 });
 
 // Plane live updates
+document.getElementById("su_tk_enabled").addEventListener("change", (e) => {
+  if (e.target.checked) activateToiletKing();
+  else deactivateToiletKing();
+});
 document.getElementById("su_plane_enabled").addEventListener("change", (e) => {
   state.plane.enabled = e.target.checked;
 });
@@ -3022,64 +3579,239 @@ document.getElementById("su_plane_fg").addEventListener("input", (e) => {
 });
 
 // =====================================================================
-// MATCH CEREMONY — line-up + national anthems before kickoff
+// MATCH CEREMONY — line-up + national anthems before kickoff / winner at full time
 // =====================================================================
-function showCeremonyTeam(team) {
-  const teamData = (team === "Red") ? state.teamRed : state.teamBlue;
-  document.getElementById("ceremony-flag").textContent = teamData.flag || "🏳️";
+function updateAnthemPreviewLabels() {
+  const kick = state.anthemKickoffDuration;
+  for (const side of ["red", "blue"]) {
+    const btn = document.getElementById(`btn_preview_anthem_${side}`);
+    if (btn && !btn.classList.contains("playing")) {
+      btn.textContent = `🎵 Preview anthem (${kick}s)`;
+    }
+  }
+}
+
+function ceremonyAnthemSlug(nationName) {
+  const slugs = getAnthemSlugsForNation(nationName || "");
+  return slugs.length ? slugs[0] : "";
+}
+
+function broadcastCeremony(team, opts) {
+  const {
+    durationSec, statusPrefix, mode,
+    nationName: nationOverride, teamName: nameOverride,
+    teamColor: colorOverride, flag: flagOverride,
+  } = opts;
+  const teamData = team ? (team === "Red" ? state.teamRed : state.teamBlue) : null;
+  const nationName = nationOverride || teamData?.nation || "";
+  Object.assign(state.ceremony, {
+    active: true,
+    mode,
+    team: team || null,
+    teamName: nameOverride || teamData?.name || nationName,
+    teamColor: colorOverride || teamData?.color || "#b388ff",
+    flag: flagOverride || (team ? getTeamFlag(team) : (NATIONS[nationName]?.flag || "🏳️")),
+    nationName,
+    anthemSlug: ceremonyAnthemSlug(nationName),
+    statusPrefix,
+    durationSec,
+    startedAt: Date.now(),
+  });
+  pushStateToServer();
+}
+
+function clearCeremonyBroadcast() {
+  Object.assign(state.ceremony, {
+    active: false,
+    mode: null, team: null, teamName: "", teamColor: "", flag: "",
+    nationName: "", anthemSlug: "",
+    statusPrefix: "", durationSec: 0, startedAt: 0,
+  });
+  pushStateToServer();
+}
+
+function showCeremonyTeam(team, { durationSec, statusPrefix = "🎵 National Anthem", mode = "kickoff" }) {
+  const teamData = team === "Red" ? state.teamRed : state.teamBlue;
+  document.getElementById("ceremony-flag").textContent = getTeamFlag(team);
   const nameEl = document.getElementById("ceremony-team-name");
   nameEl.textContent = teamData.name;
   nameEl.style.color = teamData.color;
-  document.getElementById("ceremony-status").textContent = "🎵 National Anthem · 5s";
+  document.getElementById("ceremony-status").textContent = `${statusPrefix} · ${durationSec}s`;
   const bar = document.getElementById("ceremony-bar");
   bar.style.width = "0%";
   bar.style.transition = "none";
-  // Trigger reflow then animate
   void bar.offsetWidth;
-  bar.style.transition = "width 5s linear";
+  bar.style.transition = `width ${durationSec}s linear`;
   bar.style.width = "100%";
+  broadcastCeremony(team, { durationSec, statusPrefix, mode });
+}
+
+async function runWinnerCeremony(winnerTeam) {
+  if (state.ceremony.active || !winnerTeam) return;
+  state.ceremony.active = true;
+  state.ceremony.skipRequested = false;
+  document.getElementById("ceremony-overlay").classList.add("show");
+  const winnerDur = state.anthemWinnerDuration;
+  showCeremonyTeam(winnerTeam, {
+    durationSec: winnerDur,
+    statusPrefix: "🏆 Victory Anthem",
+    mode: "winner",
+  });
+  if (!state.ceremony.skipRequested) {
+    await anthemPlayer.playForTeam(winnerTeam, winnerDur);
+  }
+  document.getElementById("ceremony-overlay").classList.remove("show");
+  anthemPlayer.stop();
+  state.ceremony.skipRequested = false;
+  clearCeremonyBroadcast();
+  renderEndMatchButton();
+}
+
+async function runDrawCeremony() {
+  const mode = state.drawAnthem;
+  if (!mode || mode === "none") return;
+  if (state.ceremony.active) return;
+
+  state.ceremony.active = true;
+  state.ceremony.skipRequested = false;
+  document.getElementById("ceremony-overlay").classList.add("show");
+  const dur = Math.min(state.anthemWinnerDuration, 25);
+
+  if (mode === "host") {
+    const nation = state.hostNation;
+    const flag = NATIONS[nation]?.flag || "🏳️";
+    document.getElementById("ceremony-flag").textContent = flag;
+    const nameEl = document.getElementById("ceremony-team-name");
+    nameEl.textContent = nation;
+    nameEl.style.color = NATIONS[nation]?.color || "#b388ff";
+    document.getElementById("ceremony-status").textContent = `🤝 Draw Anthem · ${dur}s`;
+    const bar = document.getElementById("ceremony-bar");
+    bar.style.width = "0%"; bar.style.transition = "none";
+    void bar.offsetWidth;
+    bar.style.transition = `width ${dur}s linear`;
+    bar.style.width = "100%";
+    broadcastCeremony(null, {
+      durationSec: dur, statusPrefix: "🤝 Draw Anthem", mode: "draw",
+      nationName: nation, teamName: nation, teamColor: NATIONS[nation]?.color || "#b388ff", flag,
+    });
+    if (!state.ceremony.skipRequested) {
+      await anthemPlayer.play(flag, dur, getAnthemSlugsForNation(nation));
+    }
+  } else if (mode === "both") {
+    const shortDur = Math.max(5, Math.floor(dur / 2));
+    for (const team of ["Red", "Blue"]) {
+      if (state.ceremony.skipRequested) break;
+      showCeremonyTeam(team, { durationSec: shortDur, statusPrefix: "🤝 Draw Anthem", mode: "draw" });
+      await anthemPlayer.playForTeam(team, shortDur);
+    }
+  } else if (mode === "fanfare") {
+    document.getElementById("ceremony-flag").textContent = "🎺";
+    const nameEl = document.getElementById("ceremony-team-name");
+    nameEl.textContent = "Draw";
+    nameEl.style.color = "#b388ff";
+    document.getElementById("ceremony-status").textContent = `🎺 Fanfare · ${dur}s`;
+    const bar = document.getElementById("ceremony-bar");
+    bar.style.width = "0%"; bar.style.transition = "none";
+    void bar.offsetWidth;
+    bar.style.transition = `width ${dur}s linear`;
+    bar.style.width = "100%";
+    broadcastCeremony(null, {
+      durationSec: dur, statusPrefix: "🎺 Fanfare", mode: "draw",
+      nationName: "", teamName: "Draw", teamColor: "#b388ff", flag: "🎺", anthemSlug: "",
+    });
+    if (!state.ceremony.skipRequested) {
+      await anthemPlayer.play("default", dur, null);
+    }
+  }
+
+  document.getElementById("ceremony-overlay").classList.remove("show");
+  anthemPlayer.stop();
+  state.ceremony.skipRequested = false;
+  clearCeremonyBroadcast();
+}
+
+async function endMatch({ manual = false } = {}) {
+  if (state.ceremony.active || state.matchEnding) return;
+  if (state.matchRecorded && state.timeLeft <= 0) return;
+
+  if (manual) {
+    if (!isMatchInProgress()) return;
+    if (!confirm("End the match now?\nThe final whistle will blow and the winner's national anthem will play.")) return;
+  }
+
+  state.matchEnding = true;
+  state.autoplay = false;
+  hideHalftime();
+  hideFullTime();
+
+  if (state.replay.active) {
+    state.replay.onEnd = null;
+    endReplay();
+  }
+  anthemPlayer.stop();
+
+  if (manual) state.timeLeft = 0;
+
+  audioFX.doubleWhistle();
+  fetchCommentary("fulltime");
+  recordMatch();
+  renderStartStop();
+
+  const winner = getMatchWinner();
+  if (winner) {
+    await runWinnerCeremony(winner);
+  } else if (state.score.Red === state.score.Blue) {
+    await runDrawCeremony();
+  }
+
+  showFullTime();
+  state.matchEnding = false;
 }
 
 async function runCeremony() {
   if (state.ceremony.active) return;
   state.ceremony.active = true;
   state.ceremony.skipRequested = false;
+  syncTeamsFromUI();
 
-  // Snap players into formation
   resetPlayersToFormation();
   state.ball = { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 };
 
-  // Show overlay
   document.getElementById("ceremony-overlay").classList.add("show");
 
-  // Red team anthem (5s)
+  const kickDur = state.anthemKickoffDuration;
   if (!state.ceremony.skipRequested) {
-    showCeremonyTeam("Red");
-    await anthemPlayer.play(state.teamRed.flag, 5);
+    showCeremonyTeam("Red", { durationSec: kickDur, mode: "kickoff" });
+    await anthemPlayer.playForTeam("Red", kickDur);
   }
 
-  // Blue team anthem (5s)
   if (!state.ceremony.skipRequested) {
-    showCeremonyTeam("Blue");
-    await anthemPlayer.play(state.teamBlue.flag, 5);
+    showCeremonyTeam("Blue", { durationSec: kickDur, mode: "kickoff" });
+    await anthemPlayer.playForTeam("Blue", kickDur);
   }
 
-  // Hide overlay
   document.getElementById("ceremony-overlay").classList.remove("show");
   anthemPlayer.stop();
-  state.ceremony.active = false;
+  state.ceremony.skipRequested = false;
+  clearCeremonyBroadcast();
 
-  // Kick-off whistle and game start
   audioFX.whistle();
   fetchCommentary("kickoff");
   state.autoplay = true;
+  state.kickoffCeremonyDone = true;
   renderStartStop();
 }
 
-document.getElementById("ceremony-skip").addEventListener("click", () => {
+function skipCeremonyNow() {
   state.ceremony.skipRequested = true;
   anthemPlayer.stop();
-});
+  document.getElementById("ceremony-overlay").classList.remove("show");
+  clearCeremonyBroadcast();
+}
+
+document.getElementById("ceremony-skip").addEventListener("click", skipCeremonyNow);
+
+document.getElementById("btn_end_match").addEventListener("click", () => endMatch({ manual: true }));
 
 document.getElementById("btn_start_stop").addEventListener("click", async () => {
   audioFX.ensureCtx();
@@ -3096,9 +3828,14 @@ document.getElementById("btn_start_stop").addEventListener("click", async () => 
     state.stats = { possessionTicks: {Red: 0, Blue: 0}, kicks: {Red: 0, Blue: 0}, shots: {Red: 0, Blue: 0} };
     state.heatmap = {};
     state.matchHighlights = [];
-    state.shootout = { active: false, shooter: "Red", attempts: { Red: [], Blue: [] }, max: 5, finished: false };
+    state.shootout = { active: false, shooter: "Red", attempts: { Red: [], Blue: [] }, max: 5, finished: false, winnerTeam: null };
+    state.matchEnding = false;
+    state.kickoffCeremonyDone = false;
     renderCommentaries(); renderStats();
-    // New match → run line-up + anthems ceremony
+    await runCeremony();
+    return;
+  }
+  if (!state.autoplay && !state.kickoffCeremonyDone) {
     await runCeremony();
     return;
   }
@@ -3113,18 +3850,20 @@ function previewAnthem(side) {
   if (btn.classList.contains("playing")) {
     anthemPlayer.stop();
     btn.classList.remove("playing");
-    btn.textContent = "🎵 Preview anthem (5s)";
+    updateAnthemPreviewLabels();
     return;
   }
   audioFX.ensureCtx();
   const nationName = document.getElementById(`su_nation_${side}`).value;
   const flag = (NATIONS[nationName] || {}).flag || "🏳️";
-  const hasAnthem = !!ANTHEMS[flag];
+  const slugs = getAnthemSlugsForNation(nationName);
+  const hasAnthem = slugs.length > 0;
+  const dur = parseInt(document.getElementById("su_anthem_kickoff").value, 10);
   btn.classList.add("playing");
   btn.textContent = hasAnthem ? `⏹ Playing ${flag} ${nationName}…` : `⏹ Playing fanfare (no anthem for ${nationName})`;
-  anthemPlayer.play(flag, 5).then(() => {
+  anthemPlayer.play(flag, dur, slugs).then(() => {
     btn.classList.remove("playing");
-    btn.textContent = "🎵 Preview anthem (5s)";
+    updateAnthemPreviewLabels();
   });
 }
 document.getElementById("btn_preview_anthem_red").addEventListener("click", () => previewAnthem("red"));
@@ -3156,11 +3895,12 @@ document.getElementById("btn_reset_match").addEventListener("click", async () =>
   state.stats = { possessionTicks: {Red: 0, Blue: 0}, kicks: {Red: 0, Blue: 0}, shots: {Red: 0, Blue: 0} };
   state.heatmap = {};
   state.matchHighlights = [];
-  state.shootout = { active: false, shooter: "Red", attempts: { Red: [], Blue: [] }, max: 5, finished: false };
+  state.shootout = { active: false, shooter: "Red", attempts: { Red: [], Blue: [] }, max: 5, finished: false, winnerTeam: null };
+  state.matchEnding = false;
+  state.kickoffCeremonyDone = false;
   resetBall();
   resetPlayersToFormation();
   renderCommentaries(); renderStats(); renderStartStop(); renderScore();
-  // Run the kick-off ceremony again
   await runCeremony();
 });
 
@@ -3193,7 +3933,9 @@ document.getElementById("ft-new").addEventListener("click", async () => {
   state.stats = { possessionTicks: {Red: 0, Blue: 0}, kicks: {Red: 0, Blue: 0}, shots: {Red: 0, Blue: 0} };
   state.heatmap = {};
   state.matchHighlights = [];
-  state.shootout = { active: false, shooter: "Red", attempts: { Red: [], Blue: [] }, max: 5, finished: false };
+  state.shootout = { active: false, shooter: "Red", attempts: { Red: [], Blue: [] }, max: 5, finished: false, winnerTeam: null };
+  state.matchEnding = false;
+  state.kickoffCeremonyDone = false;
   renderCommentaries(); renderStats();
   await runCeremony();
 });
@@ -3203,7 +3945,10 @@ document.getElementById("ft-highlights").addEventListener("click", playHighlight
 document.getElementById("ft-penalty").addEventListener("click", startPenaltyShootout);
 document.getElementById("hm-close").addEventListener("click", hideHeatMap);
 document.getElementById("pen-take").addEventListener("click", takePenalty);
-document.getElementById("pen-close").addEventListener("click", hidePenalty);
+document.getElementById("pen-close").addEventListener("click", () => {
+  hidePenalty();
+  showFullTime();
+});
 
 document.getElementById("ht-resume").addEventListener("click", () => {
   hideHalftime();
@@ -3248,6 +3993,10 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "f" || e.key === "F") { document.body.classList.toggle("spectator"); e.preventDefault(); }
   else if (e.key === "m" || e.key === "M") { audioFX.setMuted(!audioFX.muted); renderMuteButton(); e.preventDefault(); }
   else if (e.key === " ") { document.getElementById("btn_start_stop").click(); e.preventDefault(); }
+  else if (e.key === "e" || e.key === "E") {
+    const btn = document.getElementById("btn_end_match");
+    if (btn && !btn.disabled) { endMatch({ manual: true }); e.preventDefault(); }
+  }
   else if (e.key === "Escape") { document.body.classList.remove("spectator"); hideFullTime(); hideHalftime(); hideHeatMap(); hidePenalty(); }
 });
 
@@ -3255,8 +4004,23 @@ document.addEventListener("keydown", (e) => {
 // INIT
 // =====================================================================
 populateNationDropdowns();
+loadSetupPrefs();
+syncTeamFlags();
 loadSetupFromState();
+document.getElementById("ui_lang").value = PTEFeatures.getLang();
+document.getElementById("ui_lang").addEventListener("change", (e) => {
+  PTEFeatures.setLang(e.target.value);
+  PTEFeatures.applyI18n();
+  renderStartStop();
+});
+PTEFeatures.applyI18n();
 initQRCode();
+fetch("/api/config").then(r => r.json()).then(cfg => {
+  if (cfg.stateAuthRequired) {
+    const cap = document.getElementById("ui-token-cap");
+    if (cap) cap.textContent = (PTEFeatures.t("state_token_cap")) + " — " + (PTEFeatures.getLang() === "de" ? "erforderlich auf diesem Server" : "required on this server");
+  }
+}).catch(() => {});
 requestAnimationFrame(() => {
   renderCrowd();
   // Re-render on window resize so dots stay crisp
@@ -3266,6 +4030,7 @@ requestAnimationFrame(() => {
     crowdResizeTimer = setTimeout(renderCrowd, 200);
   });
 });
+updateAnthemPreviewLabels();
 renderTabs();
 renderPrompts();
 renderScore();

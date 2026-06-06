@@ -22,6 +22,8 @@ AI-driven football simulation where every player on the pitch is controlled by `
 - **22 nations with flags** (Switzerland, Germany, Brazil, USA, Singapore, …) + custom colour picker
 
 ### Audio & Voice
+- **National anthems** — MP3s in `static/anthems/` (kickoff, winner, draw options) with synth fallback; duration sliders; skip ceremony
+- **Separate volume sliders** — stadium SFX vs anthem volume
 - **Synthesised sound FX** — whistle, kick, goal fanfare + crowd cheer (Web Audio API, no external assets)
 - **AI Commentator** with backend LLM endpoint, opt-in, polls every ~14 s during play, fires on kickoff/goal/halftime/fulltime
 - **Voice picker** — dropdown of every English voice the browser has, auto-selects male British voices first (Daniel, Microsoft Ryan), then US male, with a 🇬🇧🇺🇸🇦🇺 flag prefix
@@ -48,25 +50,34 @@ AI-driven football simulation where every player on the pitch is controlled by `
 - **Mobile read-only view** at `/spectator` — minimal UI, score, timer, pitch, stats, commentary
 - **Auto-polling** every 250 ms, ● LIVE / Waiting / Offline tag
 - **Goal flash** + score pulse on the phone too
-- **QR code** in the Match Setup panel — phones in the same network scan it and watch hands-free
+- **Ceremony overlay** + optional anthem audio synced from the main client
+- **Referee** rendered on the spectator pitch
+- **Offline QR code** (no external API) — URL includes `?token=` when `STATE_TOKEN` is set
+- **Optional `STATE_TOKEN`** — protects `/api/state` from spoofing on the LAN
 
 ### Interaction
+- **German / English UI** — language switcher (DE default), persisted in localStorage
+- **LLM interval slider** — 1.2–4.0 s reaction time (saved in setup prefs)
+- **End match** button + **`E` key** — blow the final whistle early; winner or draw anthem plays
+- **Draw anthem options** — none, host nation, both teams (short), or fanfare
 - **Live prompt editing** — change any player's strategy mid-match, takes effect on next LLM call
 - **Empty prompt = inactive** — player rendered as dashed transparent circle, sits the match out
 - **Spectator (fullscreen) mode** — `F` key hides the control panel
-- **Keyboard shortcuts** — `F` fullscreen · `M` mute · `Space` start/stop · `Esc` close modal
+- **Keyboard shortcuts** — `F` fullscreen · `M` mute · `Space` start/stop · `E` end match · `Esc` close modal
 
 ---
 
 ## 🚀 Quickstart
 
 ```bash
-export NVIDIA_API_KEY=nvapi-...
+cp .env.example .env   # add NVIDIA_API_KEY (and optional STATE_TOKEN)
 pip install -r requirements.txt
 uvicorn main:app --host 0.0.0.0 --port 8000
 # open http://localhost:8000
 # phone spectator: http://<your-ip>:8000/spectator
 ```
+
+Copy the same `STATE_TOKEN` into **Match setup → Spectator token** so the QR URL and state push stay in sync.
 
 ## 🐳 Docker
 
@@ -121,7 +132,7 @@ server {
 ## 🧠 How it works
 
 1. **Game state lives in the browser.** Ball, players, score, timer — all in a JS object running at 60 FPS via `requestAnimationFrame`.
-2. **Every 1.8 s** the browser POSTs current positions + tactical prompts to `/api/move`.
+2. **Every ~1.8 s** (configurable slider) the browser POSTs current positions + tactical prompts to `/api/move`.
 3. **Backend** assembles a compact system prompt explaining the field, roles, and active strategies, calls NVIDIA, parses the returned JSON, returns `{x, y, k}` deltas per player (clamped to ±5 each).
 4. **Browser applies** the deltas — players keep moving in those directions, kicking when in range, until the next LLM update.
 5. **Empty prompts** → player skipped in the LLM request payload, stays idle (transparent + dashed border).
@@ -163,8 +174,9 @@ server {
 | `POST` | `/api/move` | Per-tick player decisions. Returns `{moves: {player_name: {x,y,k}}}` with deltas clamped to ±5 |
 | `POST` | `/api/commentary` | One-sentence live call. Events: `kickoff`, `goal_red`, `goal_blue`, `halftime`, `fulltime`, `ambient` |
 | `POST` | `/api/generate_strategy` | Tactical Coach AI. Input: `{intent, team_name}`. Returns 4 role briefings as JSON |
-| `POST` | `/api/state` | Main client pushes current state (ball, players, score, commentary, replay frame) |
-| `GET` | `/api/state` | Spectator polls. Returns `{data, ts, stale}` (stale = true if no update for >3 s) |
+| `GET` | `/api/config` | Public config: `{model, stateAuthRequired}` |
+| `POST` | `/api/state` | Main client pushes state. Optional header `X-State-Token` if `STATE_TOKEN` is set |
+| `GET` | `/api/state` | Spectator polls. Optional `?token=`. Returns `{data, ts, stale}` |
 | `GET` | `/spectator` | Serves `static/spectator.html` |
 | `GET` | `/health` | `{status: "ok", model: ...}` for healthchecks |
 | `GET` | `/` | Serves `static/index.html` (main page) |
@@ -176,16 +188,16 @@ server {
 ### Frontend (`static/index.html`)
 | Constant | Default | What it does |
 |---|---|---|
-| `LLM_INTERVAL_MS` | 1800 | How often to call `/api/move`. Lower = more reactive, more requests. NVIDIA free tier = 40/min |
+| `state.llmIntervalMs` | 1800 | How often to call `/api/move` (slider 1200–4000 ms). NVIDIA free tier ≈ 40/min |
 | `COMMENTARY_INTERVAL_MS` | 14000 | Ambient commentary cadence |
 | `STATE_PUSH_MS` | 200 | How often the main page pushes state to backend |
 | `HEATMAP_SAMPLE_MS` | 250 | How often to record positions for the heat map |
-| `PLAYER_SPEED_SCALE` | 12 | Overall player movement speed multiplier |
-| `KICK_POWER` | 420 | Ball velocity (px/sec) on a kick |
-| `BALL_FRICTION_PER_SEC` | 0.42 | Ball decay factor per second |
+| `PLAYER_SPEED_SCALE` | 20 | Overall player movement speed multiplier |
+| `KICK_POWER` | 520 | Ball velocity (px/sec) on a kick |
+| `BALL_FRICTION_PER_SEC` | 0.55 | Ball decay factor per second |
 | `REPLAY_DURATION_SEC` | 3 | Length of slow-mo buffer |
 | `REPLAY_SPEED` | 0.35 | Playback speed multiplier (slower than 1.0 = slow-mo) |
-| `REF_SPEED` | 90 | Referee movement (px/sec) |
+| `REF_SPEED` | 130 | Referee movement (px/sec) |
 | `GK_RED_X_MIN/MAX`, `GK_BLUE_X_MIN/MAX`, `GK_Y_MIN/MAX` | — | Goalkeeper movement bounds |
 
 ### Backend (`main.py`)
@@ -216,7 +228,7 @@ server {
 | Symptom | Cause / Fix |
 |---|---|
 | Container won't start: `NVIDIA_API_KEY environment variable is required` | Env var missing on the container. Set it in Portainer Stack → Environment variables |
-| `API error: HTTP 429` in debug console | NVIDIA rate limit hit. Increase `LLM_INTERVAL_MS` to 2500+ or upgrade tier |
+| `API error: HTTP 429` in debug console | NVIDIA rate limit hit. Increase the LLM interval slider to 2.5 s+ or upgrade tier |
 | Players don't move | Check `/health` returns OK; watch the debug console at the bottom for parse errors |
 | Some player stays still while others move | Llama sometimes drops a player from JSON. The frontend applies a zero-move fallback — the game keeps running |
 | **Spectator shows "Waiting" forever** | Main page must be open and a match playing (or just started). State is pushed only when the main page is alive |
