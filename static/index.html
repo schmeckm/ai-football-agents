@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PTE - Football Soccer - LLM Driven</title>
+<title>Football Soccer - LLM Driven</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&family=Orbitron:wght@600;700;900&display=swap" rel="stylesheet">
@@ -428,7 +428,7 @@
       <option value="de">Deutsch</option>
       <option value="en">English</option>
     </select>
-    <h1 id="page-title">⚽ PTE - Football Soccer - LLM Driven</h1>
+    <h1 id="page-title">⚽ Football Soccer - LLM Driven</h1>
     <div class="subtitle" id="ui-subtitle">🇺🇸 FIFA World Cup 2026 · USA · Canada · Mexico</div>
 
     <details>
@@ -488,7 +488,7 @@
 
         <h3>📢 Stadium banners</h3>
         <div class="row cols-3">
-          <div><label>Top banner text</label><input type="text" id="su_banner_top_text" placeholder="e.g. PTE ASPIRE"></div>
+          <div><label>Top banner text</label><input type="text" id="su_banner_top_text" placeholder="e.g. ROCHE TAVERO"></div>
           <div><label>Background</label><input type="color" id="su_banner_top_bg" value="#1a1c23"></div>
           <div><label>Text color</label><input type="color" id="su_banner_top_fg" value="#ffd700"></div>
         </div>
@@ -515,7 +515,7 @@
           </label>
         </div>
         <div class="row cols-3">
-          <div><label>Banner text</label><input type="text" id="su_plane_text" placeholder="e.g. PTE ASPIRE INNOVATION"></div>
+          <div><label>Banner text</label><input type="text" id="su_plane_text" placeholder="e.g. ASPIRE INNOVATION"></div>
           <div><label>Background</label><input type="color" id="su_plane_bg" value="#1a1c23"></div>
           <div><label>Text color</label><input type="color" id="su_plane_fg" value="#ffd54f"></div>
         </div>
@@ -545,8 +545,8 @@
     <div class="caption" id="ui-coach-cap">Four roles per side: Striker, Midfielder, Defender, Goalkeeper. Leave a prompt empty and that player sits on the bench.</div>
 
     <div class="tabs">
-      <button class="tab active" data-team="Red" id="tab_red">🇨🇭 PTE Digital</button>
-      <button class="tab" data-team="Blue" id="tab_blue">🇩🇪 PTE - Aspire</button>
+      <button class="tab active" data-team="Red" id="tab_red">🇨🇭 Digital</button>
+      <button class="tab" data-team="Blue" id="tab_blue">🇩🇪 Aspire</button>
     </div>
 
     <div class="gen-box">
@@ -605,7 +605,7 @@
     <h1>Live simulation</h1>
     <div id="pitch-header">
       <span>⏱️ <span id="time-text">90.0</span>s</span>
-      <span id="score-text">PTE Digital: 0  |  PTE - Aspire: 0</span>
+      <span id="score-text">Digital: 0  |  Aspire: 0</span>
       <span style="display:flex; gap: 8px; align-items: center;">
         <button id="btn-mute" title="Toggle sound (M)">🔊</button>
         <span id="live-tag">● LIVE</span>
@@ -619,7 +619,7 @@
 
     <div id="stats-bar">
       <div class="stat-side red">
-        <div class="stat-team-name" id="stat-name-red" style="color:#ff1744">🇨🇭 PTE Digital</div>
+        <div class="stat-team-name" id="stat-name-red" style="color:#ff1744">🇨🇭 Digital</div>
         <div class="stat-detail"><span id="stat-kicks-red">0</span> kicks · <span id="stat-shots-red">0</span> shots</div>
       </div>
       <div id="poss-bar-wrap">
@@ -630,7 +630,7 @@
         </div>
       </div>
       <div class="stat-side blue">
-        <div class="stat-team-name" id="stat-name-blue" style="color:#00b0ff">PTE - Aspire 🇩🇪</div>
+        <div class="stat-team-name" id="stat-name-blue" style="color:#00b0ff">Aspire 🇩🇪</div>
         <div class="stat-detail"><span id="stat-kicks-blue">0</span> kicks · <span id="stat-shots-blue">0</span> shots</div>
       </div>
     </div>
@@ -1624,8 +1624,8 @@ const state = {
   autoplay: false,
   ball: { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 },
   ballKickCooldown: 0, ballTrail: [],
-  teamRed:  { name: "PTE Digital",  nation: "Switzerland", color: "#ff1744", dynamics: 1.0 },
-  teamBlue: { name: "PTE - Aspire", nation: "Germany",     color: "#00b0ff", dynamics: 1.0 },
+  teamRed:  { name: "Digital",  nation: "Switzerland", color: "#ff1744", dynamics: 1.0 },
+  teamBlue: { name: "Aspire", nation: "Germany",     color: "#00b0ff", dynamics: 1.0 },
   players: buildPlayers(),
   lastLLMCall: 0, pendingLLM: false, lastLLMDebug: "{}", apiError: null,
   activeTab: "Red",
@@ -1647,7 +1647,7 @@ const state = {
   plane: {
     enabled: true,
     x: -200, y: 55, vx: 38,    // px/sec, moves left to right
-    text: "PTE ASPIRE INNOVATION",
+    text: "ASPIRE INNOVATION",
     bg: "#1a1c23",
     fg: "#ffd54f",
   },
@@ -3047,7 +3047,7 @@ function renderPitch() {
   ctx.fillRect(FIELD_W - 10, GOAL_MIN, 10, GOAL_MAX - GOAL_MIN);
   ctx.fillStyle = "rgba(255,255,255,0.11)";
   ctx.font = "bold 30px 'Orbitron', 'Impact', sans-serif"; ctx.textAlign = "center";
-  ctx.fillText("PTE ASPIRE FOOTBALL", FIELD_W/2, FIELD_H/2 + 10);
+  ctx.fillText("FOOTBALL SOCCER", FIELD_W/2, FIELD_H/2 + 10);
 
   let ballX, ballY, ballTrail, getPlayer;
   if (state.replay.active && state.replay.frames.length > 0) {

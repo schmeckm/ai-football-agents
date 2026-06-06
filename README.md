@@ -1,9 +1,9 @@
-# ⚽ PTE - Football Soccer · LLM Driven
+# ⚽ Football Soccer · LLM Driven
 
 AI-driven football simulation where every player on the pitch is controlled by `llama-3.1-8b-instruct`. Each player gets a natural-language tactical prompt; the LLM decides where they move and when they shoot. Built as a team-event tool — 🇺🇸 ready for the **FIFA World Cup 2026 (USA · Canada · Mexico)** vibes.
 
 ```
-🇨🇭 PTE Digital                vs                PTE - Aspire 🇩🇪
+🇨🇭 Digital                    vs                    Aspire 🇩🇪
    ▼                                                     ▼
 [STR][MID][DEF][GK]                          [STR][MID][DEF][GK]
                             ⚽
@@ -82,8 +82,8 @@ Copy the same `STATE_TOKEN` into **Match setup → Spectator token** so the QR U
 ## 🐳 Docker
 
 ```bash
-docker build -t pte-football .
-docker run -p 8000:8000 -e NVIDIA_API_KEY=nvapi-... pte-football
+docker build -t ai-football .
+docker run -p 8000:8000 -e NVIDIA_API_KEY=nvapi-... ai-football
 ```
 
 ## 📦 Portainer deployment via GitHub
@@ -217,7 +217,7 @@ server {
   ```bash
   curl http://localhost:8000/health
   curl -X POST http://localhost:8000/api/commentary -H "Content-Type: application/json" \
-       -d '{"event":"goal_red","team_red_name":"PTE Digital","score_red":1,"score_blue":0}'
+       -d '{"event":"goal_red","team_red_name":"Digital","score_red":1,"score_blue":0}'
   ```
 - **Test the spectator without a phone:** open `http://localhost:8000/spectator` in a second browser tab while a match is running on the main tab
 
@@ -256,7 +256,7 @@ server {
 
 | Team | Nation | Colour | Plays |
 |---|---|---|---|
-| 🇨🇭 PTE Digital | Switzerland | `#ff1744` (red) | Left side, attacks right goal |
-| 🇩🇪 PTE - Aspire | Germany | `#00b0ff` (blue) | Right side, attacks left goal |
+| 🇨🇭 Digital | Switzerland | `#ff1744` (red) | Left side, attacks right goal |
+| 🇩🇪 Aspire | Germany | `#00b0ff` (blue) | Right side, attacks left goal |
 
 Both editable in the Match Setup accordion — change name, nation flag, jersey colour, duration (30–300 s), then **Apply & Kickoff**.

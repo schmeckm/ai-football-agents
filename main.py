@@ -1,5 +1,5 @@
 """
-PTE Aspire Football - FastAPI Backend
+Football Soccer - FastAPI Backend
 Endpoints:
   POST /api/move               -> game move decisions
   POST /api/commentary         -> live match commentary
@@ -35,7 +35,7 @@ NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 MODEL_ID = os.environ.get("MODEL_ID", "meta/llama-3.1-8b-instruct")
 STATE_TOKEN = os.environ.get("STATE_TOKEN", "").strip()
 
-app = FastAPI(title="PTE Aspire Football")
+app = FastAPI(title="Football Soccer")
 
 app.add_middleware(
     CORSMiddleware,
@@ -87,8 +87,8 @@ class Player(BaseModel):
 class MoveRequest(BaseModel):
     ball: Dict[str, float]
     players: Dict[str, Player]
-    team_red_name: str = "PTE Digital"
-    team_blue_name: str = "PTE - Aspire"
+    team_red_name: str = "Digital"
+    team_blue_name: str = "Aspire"
     field_w: int = 800
     field_h: int = 500
 

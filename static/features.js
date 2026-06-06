@@ -4,7 +4,7 @@
 
   const I18N = {
     de: {
-      title: "⚽ PTE Football Soccer — KI-gesteuert",
+      title: "⚽ Football Soccer — KI-gesteuert",
       subtitle: "🇺🇸 FIFA WM 2026 · USA · Kanada · Mexiko",
       match_setup: "🏆 Match-Setup",
       setup_cap: "Teams, Nationen und Spielzeit einstellen. Übernehmen startet ein frisches Match.",
@@ -52,7 +52,7 @@
       lang_label: "🌐 Sprache",
     },
     en: {
-      title: "⚽ PTE Football Soccer — LLM Driven",
+      title: "⚽ Football Soccer — LLM Driven",
       subtitle: "🇺🇸 FIFA World Cup 2026 · USA · Canada · Mexico",
       match_setup: "🏆 Match setup",
       setup_cap: "Name your sides, pick nations, set the clock. Apply starts a fresh match.",
