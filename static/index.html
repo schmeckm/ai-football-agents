@@ -477,6 +477,13 @@
         <label>Match duration: <span id="su_duration_val">90</span>s</label>
         <input type="range" id="su_duration" min="30" max="300" step="10" value="90">
 
+        <label id="ui-avatar-lbl">Player heads</label>
+        <select id="su_avatar_style">
+          <option value="cartoon">Cartoon faces</option>
+          <option value="larve">Basler Fasnacht · Larven 🎭</option>
+        </select>
+        <div class="caption" id="ui-avatar-cap">Stylised Basel carnival masks: Waggis, Alti Dante, Vogel Gryff, Fratze, Holzlarve.</div>
+
         <label>🔊 Stadium SFX: <span id="su_sfx_vol_val">100</span>%</label>
         <input type="range" id="su_sfx_vol" min="0" max="100" step="5" value="100">
         <label>🎵 Anthem volume: <span id="su_anthem_vol_val">100</span>%</label>
@@ -656,6 +663,7 @@
 
 <script src="/static/qr.js"></script>
 <script src="/static/features.js"></script>
+<script src="/static/avatars.js"></script>
 <script>
 // =====================================================================
 // CONSTANTS
@@ -779,7 +787,7 @@ function defaultPrompts() {
   };
 }
 
-function buildPlayers() {
+function buildPlayers(avatarStyle = "cartoon") {
   const prompts = defaultPrompts();
   const players = {};
   for (const [name, base] of Object.entries(INITIAL_POS)) {
@@ -787,7 +795,7 @@ function buildPlayers() {
       ...base,
       prompt: prompts[name],
       dx: 0, dy: 0, kick: false,
-      appearance: generateAppearance(name),
+      appearance: FootballAvatars.generateAppearance(name, avatarStyle),
     };
   }
   return players;
@@ -1381,173 +1389,7 @@ class VoiceManager {
 }
 const voiceManager = new VoiceManager();
 
-// =====================================================================
-// AVATAR — cartoon faces, deterministic per player name
-// =====================================================================
-function hashString(s) {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) h = ((h ^ s.charCodeAt(i)) * 16777619) >>> 0;
-  return h;
-}
-
-const SKIN_TONES   = ["#fcd9b8", "#f0c098", "#d6a17a", "#b8804a", "#8a5a32", "#5d3a1c"];
-const HAIR_COLORS  = ["#1a0e08", "#3a200e", "#6b4523", "#a87436", "#c69a4f", "#d4d4d4", "#b03020"];
-const HAIR_STYLES  = ["short", "spiky", "curly", "bald", "buzz", "mohawk", "long"];
-const MOUTH_STYLES = ["neutral", "smile", "smirk"];
-
-const ROLE_NUMBERS = {
-  Striker: 9, Midfielder: 10, Defender: 4, Goalkeeper: 1,
-};
-
-function generateAppearance(playerName) {
-  const h = hashString(playerName);
-  return {
-    skin:  SKIN_TONES[h % SKIN_TONES.length],
-    hair:  HAIR_COLORS[Math.floor(h / 7) % HAIR_COLORS.length],
-    style: HAIR_STYLES[Math.floor(h / 13) % HAIR_STYLES.length],
-    mouth: MOUTH_STYLES[Math.floor(h / 23) % MOUTH_STYLES.length],
-  };
-}
-
-function drawHair(ctx, cx, cy, head_r, app) {
-  ctx.fillStyle = app.hair;
-  switch (app.style) {
-    case "short": {
-      ctx.beginPath();
-      ctx.arc(cx, cy, head_r * 1.02, Math.PI, Math.PI * 2);
-      ctx.lineTo(cx + head_r * 0.95, cy + 1);
-      ctx.lineTo(cx - head_r * 0.95, cy + 1);
-      ctx.closePath();
-      ctx.fill();
-      break;
-    }
-    case "spiky": {
-      ctx.beginPath();
-      ctx.arc(cx, cy, head_r * 1.02, Math.PI * 1.05, Math.PI * 1.95);
-      ctx.closePath(); ctx.fill();
-      for (const off of [-3.5, -1, 1.5, 4]) {
-        ctx.beginPath();
-        ctx.moveTo(cx + off,       cy - head_r);
-        ctx.lineTo(cx + off + 1,   cy - head_r - 3.2);
-        ctx.lineTo(cx + off + 2,   cy - head_r);
-        ctx.closePath(); ctx.fill();
-      }
-      break;
-    }
-    case "curly": {
-      for (const [dx, dy] of [[-4.5,-head_r],[-1.5,-head_r-1.5],[1.5,-head_r-1.5],[4.5,-head_r],[-5.5,-head_r+1.5],[5.5,-head_r+1.5]]) {
-        ctx.beginPath();
-        ctx.arc(cx + dx, cy + dy, 1.9, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      break;
-    }
-    case "bald":
-      break;
-    case "buzz": {
-      ctx.globalAlpha = 0.55;
-      ctx.beginPath();
-      ctx.arc(cx, cy, head_r * 0.98, Math.PI * 1.1, Math.PI * 1.9);
-      ctx.closePath(); ctx.fill();
-      ctx.globalAlpha = 1;
-      break;
-    }
-    case "mohawk": {
-      ctx.fillRect(cx - 1.4, cy - head_r - 2.5, 2.8, 4);
-      ctx.beginPath();
-      ctx.arc(cx, cy, head_r * 1.0, Math.PI * 1.1, Math.PI * 1.9);
-      ctx.closePath(); ctx.fill();
-      break;
-    }
-    case "long": {
-      ctx.beginPath();
-      ctx.arc(cx, cy, head_r * 1.05, Math.PI * 0.9, Math.PI * 2.1);
-      ctx.lineTo(cx + head_r * 1.05, cy + head_r * 0.5);
-      ctx.lineTo(cx - head_r * 1.05, cy + head_r * 0.5);
-      ctx.closePath(); ctx.fill();
-      break;
-    }
-  }
-}
-
-function drawMouth(ctx, cx, head_cy, head_r, mouthStyle) {
-  ctx.strokeStyle = "#3a1810";
-  ctx.lineWidth = 0.9;
-  const my = head_cy + head_r * 0.42;
-  ctx.beginPath();
-  if (mouthStyle === "smile") {
-    ctx.arc(cx, my - 1, 2, 0.1 * Math.PI, 0.9 * Math.PI);
-  } else if (mouthStyle === "smirk") {
-    ctx.moveTo(cx - 1.5, my);
-    ctx.quadraticCurveTo(cx, my - 1, cx + 2, my - 0.6);
-  } else {
-    ctx.moveTo(cx - 1.7, my);
-    ctx.lineTo(cx + 1.7, my);
-  }
-  ctx.stroke();
-}
-
-function drawAvatar(ctx, cx, cy, teamColor, role, appearance, active) {
-  const isGK = role === "Goalkeeper";
-  const r = isGK ? PLAYER_RADIUS + 2 : PLAYER_RADIUS;
-
-  if (!active) {
-    ctx.globalAlpha = 0.32; ctx.fillStyle = teamColor;
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 1.5;
-    ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.font = "bold 9px 'Inter', sans-serif"; ctx.textAlign = "center";
-    ctx.fillText(isGK ? "GK" : role.slice(0, 3).toUpperCase(), cx, cy + 3);
-    return;
-  }
-
-  // Outer glow
-  ctx.globalAlpha = 0.22;
-  ctx.fillStyle = teamColor;
-  ctx.beginPath(); ctx.arc(cx, cy, r + 5, 0, Math.PI * 2); ctx.fill();
-  ctx.globalAlpha = 1;
-
-  // Jersey body — GK gets classic yellow with team-colour ring
-  const jerseyColor = isGK ? "#ffd54f" : teamColor;
-  ctx.fillStyle = jerseyColor;
-  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = 1; ctx.stroke();
-
-  // Head
-  const head_r = r * 0.62;
-  const head_cy = cy - r * 0.18;
-  ctx.fillStyle = appearance.skin;
-  ctx.beginPath(); ctx.arc(cx, head_cy, head_r, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.lineWidth = 0.6; ctx.stroke();
-
-  // Hair on top
-  drawHair(ctx, cx, head_cy, head_r, appearance);
-
-  // Eyes
-  ctx.fillStyle = "#1a1a1a";
-  ctx.beginPath(); ctx.arc(cx - head_r * 0.42, head_cy - head_r * 0.1, 0.95, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx + head_r * 0.42, head_cy - head_r * 0.1, 0.95, 0, Math.PI * 2); ctx.fill();
-
-  // Mouth
-  drawMouth(ctx, cx, head_cy, head_r, appearance.mouth);
-
-  // Jersey number on the body
-  const num = ROLE_NUMBERS[role];
-  if (num != null) {
-    ctx.fillStyle = isGK ? "#1a1a1a" : "rgba(255,255,255,0.95)";
-    ctx.font = "bold 7px 'Inter', sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(String(num), cx, cy + r * 0.78);
-  }
-
-  // GK gets team-coloured ring
-  if (isGK) {
-    ctx.strokeStyle = teamColor; ctx.lineWidth = 2.6;
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
-  }
-}
+// Avatars: see static/avatars.js (FootballAvatars)
 
 // =====================================================================
 // CONFETTI
@@ -1626,7 +1468,7 @@ const state = {
   ballKickCooldown: 0, ballTrail: [],
   teamRed:  { name: "Digital",  nation: "Switzerland", color: "#ff1744", dynamics: 1.0 },
   teamBlue: { name: "Aspire", nation: "Germany",     color: "#00b0ff", dynamics: 1.0 },
-  players: buildPlayers(),
+  players: buildPlayers("cartoon"),
   lastLLMCall: 0, pendingLLM: false, lastLLMDebug: "{}", apiError: null,
   activeTab: "Red",
   matchRecorded: false, halftimeShown: false,
@@ -1684,6 +1526,7 @@ const state = {
   llmIntervalMs: DEFAULT_LLM_INTERVAL_MS,
   sfxVolume: 1,
   anthemVolume: 1,
+  avatarStyle: "cartoon",
   // Match ceremony — line-up + anthems before kickoff / winner anthem at full time
   ceremony: {
     active: false, skipRequested: false,
@@ -1722,6 +1565,7 @@ function loadSetupPrefs() {
     if (prefs.hostNation) state.hostNation = prefs.hostNation;
     if (prefs.sfxVolume != null) state.sfxVolume = prefs.sfxVolume;
     if (prefs.anthemVolume != null) state.anthemVolume = prefs.anthemVolume;
+    if (prefs.avatarStyle) state.avatarStyle = prefs.avatarStyle;
   } catch { /* ignore */ }
   const tok = localStorage.getItem(STATE_TOKEN_KEY) || "";
   if (tok) document.getElementById("su_state_token").value = tok;
@@ -1735,6 +1579,7 @@ function saveSetupPrefs() {
     hostNation: state.hostNation,
     sfxVolume: state.sfxVolume,
     anthemVolume: state.anthemVolume,
+    avatarStyle: state.avatarStyle,
   }));
   const tok = document.getElementById("su_state_token").value.trim();
   if (tok) localStorage.setItem(STATE_TOKEN_KEY, tok);
@@ -1795,7 +1640,14 @@ function loadSetupFromState() {
   document.getElementById("su_sfx_vol_val").textContent = Math.round(state.sfxVolume * 100);
   document.getElementById("su_anthem_vol").value      = Math.round(state.anthemVolume * 100);
   document.getElementById("su_anthem_vol_val").textContent = Math.round(state.anthemVolume * 100);
+  document.getElementById("su_avatar_style").value = state.avatarStyle || "cartoon";
   applyBannersToUI();
+}
+
+function refreshPlayerAppearances() {
+  for (const name of Object.keys(state.players)) {
+    state.players[name].appearance = FootballAvatars.generateAppearance(name, state.avatarStyle || "cartoon");
+  }
 }
 
 function applyBannersToUI() {
@@ -1900,6 +1752,7 @@ function syncTeamsFromUI() {
   state.llmIntervalMs = parseInt(document.getElementById("su_llm_interval").value, 10);
   state.sfxVolume = parseInt(document.getElementById("su_sfx_vol").value, 10) / 100;
   state.anthemVolume = parseInt(document.getElementById("su_anthem_vol").value, 10) / 100;
+  state.avatarStyle = document.getElementById("su_avatar_style").value || "cartoon";
   audioFX.setSfxVolume(state.sfxVolume);
   saveSetupPrefs();
   syncTeamFlags();
@@ -1937,7 +1790,7 @@ function applySetup() {
   state.score = { Red: 0, Blue: 0 }; state.autoplay = false;
   state.ball = { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 };
   state.ballKickCooldown = 0; state.ballTrail = [];
-  state.players = buildPlayers();
+  state.players = buildPlayers(state.avatarStyle || "cartoon");
   state.lastLLMDebug = "{}"; state.apiError = null;
   state.matchRecorded = false; state.halftimeShown = false;
   state.commentaries = [];
@@ -2061,7 +1914,7 @@ function loadStrategyByName(name) {
   audioFX.setSfxVolume(state.sfxVolume);
   state.score = { Red: 0, Blue: 0 }; state.autoplay = false;
   state.ball = { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 };
-  state.ballTrail = []; state.players = buildPlayers();
+  state.ballTrail = []; state.players = buildPlayers(state.avatarStyle || "cartoon");
   for (const [pName, prompt] of Object.entries(s.prompts || {})) {
     if (state.players[pName]) state.players[pName].prompt = prompt;
   }
@@ -2601,6 +2454,7 @@ async function pushStateToServer() {
             red: NATIONS[state.teamRed.nation]?.flag || "🔴",
             blue: NATIONS[state.teamBlue.nation]?.flag || "🔵",
           },
+          avatarStyle: state.avatarStyle,
           banners: state.banners,
           plane: state.plane.enabled ? {
             x: state.plane.x, y: state.plane.y,
@@ -3081,8 +2935,8 @@ function renderPitch() {
     const pInfo = getPlayer(name);
     if (!pInfo) continue;
     const baseColor = pInfo.team === "Red" ? state.teamRed.color : state.teamBlue.color;
-    const appearance = state.players[name].appearance || generateAppearance(name);
-    drawAvatar(ctx, pInfo.x, pInfo.y, baseColor, pInfo.role, appearance, pInfo.active);
+    const appearance = state.players[name].appearance || FootballAvatars.generateAppearance(name, state.avatarStyle);
+    FootballAvatars.drawAvatar(ctx, pInfo.x, pInfo.y, baseColor, pInfo.role, appearance, pInfo.active, PLAYER_RADIUS);
   }
 
   // Referee (only in live mode, not in replay)
@@ -3526,6 +3380,11 @@ document.getElementById("su_sfx_vol").addEventListener("input", (e) => {
   audioFX.setSfxVolume(state.sfxVolume);
   saveSetupPrefs();
 });
+document.getElementById("su_avatar_style").addEventListener("change", (e) => {
+  state.avatarStyle = e.target.value || "cartoon";
+  refreshPlayerAppearances();
+  saveSetupPrefs();
+});
 document.getElementById("su_anthem_vol").addEventListener("input", (e) => {
   state.anthemVolume = parseInt(e.target.value, 10) / 100;
   document.getElementById("su_anthem_vol_val").textContent = e.target.value;
@@ -3650,21 +3509,25 @@ async function runWinnerCeremony(winnerTeam) {
   if (state.ceremony.active || !winnerTeam) return;
   state.ceremony.active = true;
   state.ceremony.skipRequested = false;
-  document.getElementById("ceremony-overlay").classList.add("show");
-  const winnerDur = state.anthemWinnerDuration;
-  showCeremonyTeam(winnerTeam, {
-    durationSec: winnerDur,
-    statusPrefix: "🏆 Victory Anthem",
-    mode: "winner",
-  });
-  if (!state.ceremony.skipRequested) {
-    await anthemPlayer.playForTeam(winnerTeam, winnerDur);
+  try {
+    document.getElementById("ceremony-overlay").classList.add("show");
+    const winnerDur = state.anthemWinnerDuration;
+    showCeremonyTeam(winnerTeam, {
+      durationSec: winnerDur,
+      statusPrefix: "🏆 Victory Anthem",
+      mode: "winner",
+    });
+    if (!state.ceremony.skipRequested) {
+      await anthemPlayer.playForTeam(winnerTeam, winnerDur);
+    }
+  } finally {
+    state.ceremony.active = false;
+    document.getElementById("ceremony-overlay").classList.remove("show");
+    anthemPlayer.stop();
+    state.ceremony.skipRequested = false;
+    clearCeremonyBroadcast();
+    renderEndMatchButton();
   }
-  document.getElementById("ceremony-overlay").classList.remove("show");
-  anthemPlayer.stop();
-  state.ceremony.skipRequested = false;
-  clearCeremonyBroadcast();
-  renderEndMatchButton();
 }
 
 async function runDrawCeremony() {
@@ -3674,6 +3537,7 @@ async function runDrawCeremony() {
 
   state.ceremony.active = true;
   state.ceremony.skipRequested = false;
+  try {
   document.getElementById("ceremony-overlay").classList.add("show");
   const dur = Math.min(state.anthemWinnerDuration, 25);
 
@@ -3723,11 +3587,13 @@ async function runDrawCeremony() {
       await anthemPlayer.play("default", dur, null);
     }
   }
-
-  document.getElementById("ceremony-overlay").classList.remove("show");
-  anthemPlayer.stop();
-  state.ceremony.skipRequested = false;
-  clearCeremonyBroadcast();
+  } finally {
+    state.ceremony.active = false;
+    document.getElementById("ceremony-overlay").classList.remove("show");
+    anthemPlayer.stop();
+    state.ceremony.skipRequested = false;
+    clearCeremonyBroadcast();
+  }
 }
 
 async function endMatch({ manual = false } = {}) {
@@ -3772,34 +3638,37 @@ async function runCeremony() {
   if (state.ceremony.active) return;
   state.ceremony.active = true;
   state.ceremony.skipRequested = false;
-  syncTeamsFromUI();
+  try {
+    syncTeamsFromUI();
 
-  resetPlayersToFormation();
-  state.ball = { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 };
+    resetPlayersToFormation();
+    state.ball = { x: BALL_START.x, y: BALL_START.y, vx: 0, vy: 0 };
 
-  document.getElementById("ceremony-overlay").classList.add("show");
+    document.getElementById("ceremony-overlay").classList.add("show");
 
-  const kickDur = state.anthemKickoffDuration;
-  if (!state.ceremony.skipRequested) {
-    showCeremonyTeam("Red", { durationSec: kickDur, mode: "kickoff" });
-    await anthemPlayer.playForTeam("Red", kickDur);
+    const kickDur = state.anthemKickoffDuration;
+    if (!state.ceremony.skipRequested) {
+      showCeremonyTeam("Red", { durationSec: kickDur, mode: "kickoff" });
+      await anthemPlayer.playForTeam("Red", kickDur);
+    }
+
+    if (!state.ceremony.skipRequested) {
+      showCeremonyTeam("Blue", { durationSec: kickDur, mode: "kickoff" });
+      await anthemPlayer.playForTeam("Blue", kickDur);
+    }
+
+    audioFX.whistle();
+    fetchCommentary("kickoff");
+    state.autoplay = true;
+    state.kickoffCeremonyDone = true;
+    renderStartStop();
+  } finally {
+    state.ceremony.active = false;
+    document.getElementById("ceremony-overlay").classList.remove("show");
+    anthemPlayer.stop();
+    state.ceremony.skipRequested = false;
+    clearCeremonyBroadcast();
   }
-
-  if (!state.ceremony.skipRequested) {
-    showCeremonyTeam("Blue", { durationSec: kickDur, mode: "kickoff" });
-    await anthemPlayer.playForTeam("Blue", kickDur);
-  }
-
-  document.getElementById("ceremony-overlay").classList.remove("show");
-  anthemPlayer.stop();
-  state.ceremony.skipRequested = false;
-  clearCeremonyBroadcast();
-
-  audioFX.whistle();
-  fetchCommentary("kickoff");
-  state.autoplay = true;
-  state.kickoffCeremonyDone = true;
-  renderStartStop();
 }
 
 function skipCeremonyNow() {
