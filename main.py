@@ -6,6 +6,7 @@ Endpoints:
   POST /api/generate_strategy  -> generate 3 position prompts from intent
   POST /api/state              -> main client pushes current state
   GET  /api/state              -> spectator polls current state
+  POST /api/event              -> explicit match events (also published to MQTT UNS)
   GET  /spectator              -> spectator page (mobile-friendly read-only)
 """
 import os
@@ -13,6 +14,7 @@ import re
 import sys
 import time
 import json
+from contextlib import asynccontextmanager
 from typing import Dict, Any, Optional
 from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
@@ -27,6 +29,8 @@ try:
 except ImportError:
     pass
 
+from mqtt_bridge import MqttBridge
+
 NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY")
 if not NVIDIA_API_KEY:
     raise RuntimeError("NVIDIA_API_KEY environment variable is required")
@@ -35,7 +39,17 @@ NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 MODEL_ID = os.environ.get("MODEL_ID", "meta/llama-3.1-8b-instruct")
 STATE_TOKEN = os.environ.get("STATE_TOKEN", "").strip()
 
-app = FastAPI(title="Football Soccer")
+mqtt_bridge = MqttBridge.from_env()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await mqtt_bridge.start()
+    yield
+    await mqtt_bridge.stop()
+
+
+app = FastAPI(title="Football Soccer", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -351,11 +365,22 @@ class StateUpdate(BaseModel):
     payload: Dict[str, Any]
 
 
+class MatchEvent(BaseModel):
+    type: str
+    data: Dict[str, Any] = {}
+
+
+@app.get("/api/mqtt/status")
+async def mqtt_status():
+    return mqtt_bridge.status()
+
+
 @app.get("/api/config")
 async def public_config():
     return {
         "model": MODEL_ID,
         "stateAuthRequired": bool(STATE_TOKEN),
+        "mqtt": mqtt_bridge.public_config(),
     }
 
 
@@ -367,7 +392,22 @@ async def update_state(
     _check_state_token(x_state_token)
     _match_state["data"] = req.payload
     _match_state["ts"] = time.time()
+    await mqtt_bridge.publish_state(req.payload, _match_state["ts"])
     return {"ok": True}
+
+
+@app.post("/api/event")
+async def post_event(
+    req: MatchEvent,
+    x_state_token: Optional[str] = Header(None, alias="X-State-Token"),
+):
+    _check_state_token(x_state_token)
+    event_type = req.type.strip().lower().replace(" ", "_")
+    if not event_type:
+        raise HTTPException(status_code=400, detail="event type required")
+    ts = time.time()
+    await mqtt_bridge.publish_event(event_type, req.data, ts)
+    return {"ok": True, "type": event_type, "ts": ts}
 
 
 @app.get("/api/state")
@@ -385,7 +425,15 @@ async def get_state(token: Optional[str] = Query(None)):
 # =====================================================================
 @app.get("/health")
 async def health():
-    return {"status": "ok", "model": MODEL_ID}
+    mqtt_cfg = mqtt_bridge.public_config()
+    return {
+        "status": "ok",
+        "model": MODEL_ID,
+        "mqtt": {
+            "enabled": mqtt_cfg.get("enabled", False),
+            "connected": mqtt_cfg.get("connected", False),
+        },
+    }
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")

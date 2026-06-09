@@ -79,6 +79,62 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 
 Copy the same `STATE_TOKEN` into **Match setup → Spectator token** so the QR URL and state push stay in sync.
 
+## 📡 MQTT / Unified Namespace (optional)
+
+Live match state can be published to an MQTT broker using a UNS-style topic tree (Industrial IoT / demo friendly).
+
+**Enable in `.env`:**
+
+```bash
+MQTT_ENABLED=1
+MQTT_BROKER=localhost
+MQTT_PORT=1883
+MQTT_WS_URL=ws://localhost:9001          # browser spectator (WebSocket)
+MQTT_UNS_PREFIX=aspire/basel/demo/football
+```
+
+**Topics (default prefix):**
+
+| Topic | Content |
+|-------|---------|
+| `…/match/state` | Retained JSON snapshot (`{ts, data}`) — ball, players, score, stats |
+| `…/match/event/goal` | Goal scored |
+| `…/match/event/kickoff` | Match started |
+| `…/match/event/halftime` | Halftime |
+| `…/match/event/fulltime` | Full time |
+| `…/match/event/ceremony` | Anthem / ceremony overlay |
+| `…/agent/{player}/telemetry` | Optional per-player position (set `MQTT_AGENT_TELEMETRY=1`) |
+
+**Flow:** Main client still pushes via HTTP → FastAPI publishes to MQTT. Spectator uses **MQTT over WebSocket** when `MQTT_WS_URL` is set; otherwise HTTP polling (unchanged).
+
+**Local Mosquitto WebSocket** (add to `mosquitto.conf`):
+
+```
+listener 1883
+listener 9001
+protocol websockets
+allow_anonymous true
+```
+
+LLM endpoints (`/api/move`, `/api/generate_strategy`) stay on HTTP.
+
+### Sparkplug B (optional, parallel to JSON UNS)
+
+```bash
+SPARKPLUG_ENABLED=1
+SPARKPLUG_GROUP_ID=Aspire
+SPARKPLUG_NODE_ID=football-server
+SPARKPLUG_DEVICE_ID=match
+```
+
+| Topic | Message |
+|-------|---------|
+| `spBv1.0/Aspire/NBIRTH/football-server` | Edge node birth (protobuf) |
+| `spBv1.0/Aspire/DBIRTH/football-server/match` | Device metric definitions |
+| `spBv1.0/Aspire/DDATA/football-server/match` | Live metrics: `score_red`, `ball_x`, `time_left`, … |
+
+Decode with Ignition MQTT Engine, EMQX Sparkplug rule, or Eclipse Tahu tools — not human-readable in MQTT Explorer.
+
 ## 🐳 Docker
 
 ```bash
@@ -177,6 +233,8 @@ server {
 | `GET` | `/api/config` | Public config: `{model, stateAuthRequired}` |
 | `POST` | `/api/state` | Main client pushes state. Optional header `X-State-Token` if `STATE_TOKEN` is set |
 | `GET` | `/api/state` | Spectator polls. Optional `?token=`. Returns `{data, ts, stale}` |
+| `POST` | `/api/event` | Explicit match event → MQTT UNS (`goal`, `kickoff`, `halftime`, `fulltime`, …) |
+| `GET` | `/api/config` | Public config incl. `mqtt` block for spectator |
 | `GET` | `/spectator` | Serves `static/spectator.html` |
 | `GET` | `/health` | `{status: "ok", model: ...}` for healthchecks |
 | `GET` | `/` | Serves `static/index.html` (main page) |
@@ -241,7 +299,7 @@ server {
 
 ## 📚 Tech stack
 
-- **Backend:** Python 3.11, FastAPI, httpx, Pydantic, uvicorn
+- **Backend:** Python 3.11, FastAPI, httpx, Pydantic, uvicorn, paho-mqtt + tahu (optional MQTT UNS / Sparkplug B)
 - **Frontend:** vanilla HTML / JS / Canvas 2D — no framework, no build step
 - **LLM:** NVIDIA Build API (`meta/llama-3.1-8b-instruct`)
 - **TTS:** Browser `SpeechSynthesis` (no API calls, runs locally in the browser)

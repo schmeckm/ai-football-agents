@@ -459,6 +459,7 @@
 </div>
 
 <script src="/static/avatars.js"></script>
+<script src="/static/mqtt-spectator.js"></script>
 <script>
   const FIELD_W = 800;
   const FIELD_H = 500;
@@ -937,11 +938,14 @@
     return tok ? `/api/state?token=${encodeURIComponent(tok)}` : "/api/state";
   }
 
+  async function pollOnce() {
+    const r = await fetch(statePollUrl(), { cache: "no-store" });
+    return r.json();
+  }
+
   async function poll() {
     try {
-      const r = await fetch(statePollUrl(), { cache: "no-store" });
-      const json = await r.json();
-
+      const json = await pollOnce();
       const liveTag = document.getElementById("live-tag");
       const liveLabel = document.getElementById("live-label");
 
@@ -951,7 +955,7 @@
         if (!json.data) {
           document.getElementById("waiting").style.display = "block";
           drawPitch();
-          return;
+          return json;
         }
       } else {
         liveTag.classList.remove("stale");
@@ -959,10 +963,12 @@
       }
 
       applyState(json.data);
+      return json;
     } catch (e) {
       const liveTag = document.getElementById("live-tag");
       liveTag.classList.add("stale");
       document.getElementById("live-label").textContent = "Offline";
+      return null;
     }
   }
 
@@ -1132,9 +1138,39 @@
     });
   });
 
-  // Start polling
-  poll();
-  setInterval(poll, POLL_INTERVAL_MS);
+  // Start transport: MQTT (UNS) if configured, else HTTP poll
+  const transport = FootballMqttSpectator.createTransport();
+  transport.onPayload((data, meta) => {
+    const liveTag = document.getElementById("live-tag");
+    const liveLabel = document.getElementById("live-label");
+    if (!data) {
+      liveTag.classList.add("stale");
+      liveLabel.textContent = "Waiting";
+      document.getElementById("waiting").style.display = "block";
+      drawPitch();
+      return;
+    }
+    document.getElementById("waiting").style.display = "none";
+    if (meta.stale) {
+      liveTag.classList.add("stale");
+    } else {
+      liveTag.classList.remove("stale");
+    }
+    applyState(data);
+  });
+  transport.onStatus(({ label, stale, mode }) => {
+    const liveTag = document.getElementById("live-tag");
+    const liveLabel = document.getElementById("live-label");
+    liveLabel.textContent = label;
+    if (stale) liveTag.classList.add("stale");
+    else liveTag.classList.remove("stale");
+    if (mode === "mqtt") liveLabel.title = "Unified Namespace · MQTT";
+    else liveLabel.title = "HTTP polling";
+  });
+  fetch("/api/config")
+    .then(r => r.json())
+    .then(cfg => transport.start(cfg, pollOnce, POLL_INTERVAL_MS))
+    .catch(() => transport.start({}, pollOnce, POLL_INTERVAL_MS));
   setInterval(tickCeremonyProgress, 100);
 
   // Prevent pull-to-refresh on mobile

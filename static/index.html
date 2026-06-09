@@ -41,7 +41,7 @@
     margin: -8px 0 18px; padding-bottom: 10px;
     border-bottom: 1px solid rgba(95, 100, 130, 0.15);
   }
-  #app { display: grid; grid-template-columns: minmax(380px, 38%) 1fr; gap: 18px; padding: 18px; max-width: 1800px; margin: 0 auto; }
+  #app { display: grid; grid-template-columns: minmax(340px, 32%) minmax(480px, 1fr) minmax(240px, 280px); gap: 18px; padding: 18px; max-width: 2200px; margin: 0 auto; }
   .panel { background: linear-gradient(135deg, rgba(18, 19, 26, 0.95) 0%, rgba(14, 15, 22, 0.95) 100%);
     border: 1px solid rgba(95, 100, 130, 0.18); border-radius: 14px; padding: 20px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.04); backdrop-filter: blur(8px); }
@@ -340,8 +340,25 @@
   @keyframes hintFade { 0%, 80% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(10px); } }
   #spectator-hint kbd { background: #2f3346; color: #00e676; padding: 2px 7px; border-radius: 4px; font-family: monospace; font-weight: 700; margin: 0 2px; }
 
+  /* Help panel — feature overview (right column) */
+  #help-panel { align-self: start; position: sticky; top: 18px; max-height: calc(100vh - 36px); overflow-y: auto; padding: 16px 18px; scrollbar-width: thin; scrollbar-color: #2f3346 transparent; }
+  #help-panel h2 { font-size: 17px; margin-bottom: 6px; }
+  .help-section { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid rgba(95, 100, 130, 0.12); }
+  .help-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .help-section h3 { font-size: 12.5px; margin: 0 0 8px; color: #00e676; text-transform: uppercase; letter-spacing: 0.6px; }
+  .help-list { list-style: none; padding: 0; margin: 0; }
+  .help-list li { font-size: 12.5px; color: #b4b8c5; line-height: 1.45; margin-bottom: 7px; padding-left: 14px; position: relative; }
+  .help-list li::before { content: '›'; position: absolute; left: 0; color: #00e676; font-weight: 800; }
+  .help-keys .help-kbd-row { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 4px; }
+  .help-kbd-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #b4b8c5; }
+  .help-kbd-item kbd { background: #2f3346; color: #00e676; padding: 2px 7px; border-radius: 4px; font-family: monospace; font-weight: 700; font-size: 11px; min-width: 22px; text-align: center; }
+  .help-topics { background: #07080b; border: 1px solid #1a1c23; border-radius: 8px; padding: 10px 12px; margin: 8px 0 0; font-size: 11px; line-height: 1.5; color: #8a90a6; font-family: 'JetBrains Mono', 'Courier New', monospace; white-space: pre-wrap; word-break: break-all; }
+  .help-topics .ok { color: #00e676; }
+  .help-topics .off { color: #ff9100; }
+
   body.spectator #app { grid-template-columns: 1fr; max-width: none; padding: 24px; }
   body.spectator > #app > .panel:first-child { display: none; }
+  body.spectator #help-panel { display: none; }
   body.spectator #pitch-wrap { padding: 24px; }
   body.spectator #pitch-wrap h1 { display: none; }
   body.spectator #pitch-header { font-size: 20px; }
@@ -350,6 +367,10 @@
   body.spectator #commentary-box { margin-top: 12px; }
   body.spectator .commentary-item { font-size: 16px; }
 
+  @media (max-width: 1400px) {
+    #app { grid-template-columns: minmax(340px, 38%) 1fr; }
+    #help-panel { grid-column: 1 / -1; position: static; max-height: none; }
+  }
   @media (max-width: 1100px) {
     #app { grid-template-columns: 1fr; }
     #goal-flash .goal-text { font-size: 90px; }
@@ -656,6 +677,88 @@
         <button id="btn-voice-test" title="Test voice">🔊 Test</button>
       </div>
       <div id="commentary-list"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="help-panel">
+    <h2 id="help-title">❓ Hilfe &amp; Features</h2>
+    <p class="caption" id="help-cap">Überblick über alle Funktionen des Programms.</p>
+
+    <div class="help-section">
+      <h3 id="help-cat-sim">⚽ Simulation</h3>
+      <ul class="help-list">
+        <li id="help-sim-1">8 KI-Spieler (4 Rollen × 2 Teams) steuern Laufwege und Schüsse per LLM.</li>
+        <li id="help-sim-2">60-FPS-Physik: Ball, Tackling, Torwartzonen, Live-Schiedsrichter.</li>
+        <li id="help-sim-3">Cartoon-Köpfe oder Basler Fasnacht-Larven — pro Spieler deterministisch.</li>
+        <li id="help-sim-4">22 Nationen mit Flaggen, Teamfarben und Dynamik-Slider pro Seite.</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3 id="help-cat-tactics">🧠 Taktik &amp; Coaching</h3>
+      <ul class="help-list">
+        <li id="help-tac-1">16 Strategie-Presets (4 pro Rolle) — z. B. Pressing, Sweeper, Line Goalie.</li>
+        <li id="help-tac-2">Taktik-Coach KI: Idee eingeben → 4 Prompts für das aktive Team generieren.</li>
+        <li id="help-tac-3">Prompts live während des Spiels ändern — wirksam ab dem nächsten KI-Tick.</li>
+        <li id="help-tac-4">Leerer Prompt = Spieler inaktiv (gestrichelter Kreis auf dem Platz).</li>
+        <li id="help-tac-5">Strategie-Bibliothek: Speichern, Laden, JSON Export/Import.</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3 id="help-cat-flow">🏟️ Spielablauf</h3>
+      <ul class="help-list">
+        <li id="help-flow-1">Anpfiff-Ceremony mit Nationalhymnen (MP3 oder Synth-Fallback).</li>
+        <li id="help-flow-2">Halbzeit-Pause: Taktik anpassen, dann zweite Halbzeit.</li>
+        <li id="help-flow-3">Tore: Flash, Konfetti, Bildschirmshake, Slow-Motion-Replay.</li>
+        <li id="help-flow-4">Spielende: Highlights, Heatmap, Elfmeterschießen bei Unentschieden.</li>
+        <li id="help-flow-5">Spiel früh beenden — Sieger- oder Unentschieden-Hymne.</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3 id="help-cat-audio">🔊 Audio &amp; Kommentar</h3>
+      <ul class="help-list">
+        <li id="help-aud-1">Stadion-SFX: Pfiff, Schuss, Tor, Jubel (Web Audio).</li>
+        <li id="help-aud-2">KI-Kommentator mit optionalem Browser-TTS und Stimmen-Auswahl.</li>
+        <li id="help-aud-3">Getrennte Lautstärke für SFX und Hymnen.</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3 id="help-cat-stats">📊 Statistik &amp; Zuschauer</h3>
+      <ul class="help-list">
+        <li id="help-stat-1">Live: Ballbesitz, Kicks, Schüsse pro Team.</li>
+        <li id="help-stat-2">Turnier-Rangliste im Browser (Siege/Niederlagen/Punkte).</li>
+        <li id="help-stat-3">QR-Code &amp; /spectator — Handy-Ansicht im gleichen WLAN.</li>
+        <li id="help-stat-4">LED-Banner, Flugzeug-Werbebanner, Beat-Mörker Easter Egg.</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3 id="help-cat-mqtt">📡 MQTT / Unified Namespace</h3>
+      <p class="caption" id="help-mqtt-cap">Optional: Live match state is published to an MQTT broker (UNS-style topics).</p>
+      <ul class="help-list">
+        <li id="help-mqtt-1">Enable MQTT_ENABLED=1 in .env — broker e.g. Mosquitto on port 1883.</li>
+        <li id="help-mqtt-2">Topics appear on server start (retained meta + match/state).</li>
+        <li id="help-mqtt-3">MQTT Explorer or MQTTX: host localhost, port 1883, subscribe prefix/#.</li>
+        <li id="help-mqtt-4">LLM moves stay on HTTP (/api/move) — only state &amp; events use MQTT.</li>
+        <li id="help-mqtt-5">Phone spectator: MQTT WebSocket if MQTT_WS_URL is set; else HTTP polling.</li>
+        <li id="help-mqtt-6">Status: GET /api/mqtt/status · config: GET /api/config</li>
+        <li id="help-mqtt-7">Sparkplug B (optional): SPARKPLUG_ENABLED=1 — protobuf on spBv1.0/{group}/DDATA/…</li>
+      </ul>
+      <pre class="help-topics" id="help-mqtt-topics">…</pre>
+    </div>
+
+    <div class="help-section help-keys">
+      <h3 id="help-cat-keys">⌨️ Tastenkürzel</h3>
+      <div class="help-kbd-row">
+        <span class="help-kbd-item"><kbd>F</kbd> <span id="help-key-f">Vollbild</span></span>
+        <span class="help-kbd-item"><kbd>M</kbd> <span id="help-key-m">Stumm</span></span>
+        <span class="help-kbd-item"><kbd>Space</kbd> <span id="help-key-space">Start/Pause</span></span>
+        <span class="help-kbd-item"><kbd>E</kbd> <span id="help-key-e">Beenden</span></span>
+        <span class="help-kbd-item"><kbd>Esc</kbd> <span id="help-key-esc">Schließen</span></span>
+      </div>
     </div>
   </div>
 
@@ -2270,6 +2373,11 @@ function triggerGoalFlash(team) {
   setTimeout(() => document.body.classList.remove("shake"), 600);
   raiseRefArm();
   fetchCommentary(team === "Red" ? "goal_red" : "goal_blue");
+  publishMatchEvent("goal", {
+    team,
+    score: { ...state.score },
+    teamName: team === "Red" ? state.teamRed.name : state.teamBlue.name,
+  });
 }
 
 function physicsStep(dt) {
@@ -2412,8 +2520,18 @@ function physicsStep(dt) {
 }
 
 // =====================================================================
-// STATE PUSH (for spectator)
+// STATE PUSH (for spectator + MQTT UNS)
 // =====================================================================
+async function publishMatchEvent(type, data = {}) {
+  try {
+    await fetch("/api/event", {
+      method: "POST",
+      headers: PTEFeatures.stateFetchHeaders(),
+      body: JSON.stringify({ type, data }),
+    });
+  } catch { /* silent */ }
+}
+
 async function pushStateToServer() {
   try {
     const playersOut = {};
@@ -3310,6 +3428,7 @@ function loop(now) {
       renderStartStop();
       audioFX.doubleWhistle();
       fetchCommentary("halftime");
+      publishMatchEvent("halftime", { score: { ...state.score }, timeLeft: state.timeLeft });
       setTimeout(showHalftime, 500);
     }
     else if (state.timeLeft <= 0 && !state.matchRecorded && !state.matchEnding) {
@@ -3620,6 +3739,10 @@ async function endMatch({ manual = false } = {}) {
 
   audioFX.doubleWhistle();
   fetchCommentary("fulltime");
+  publishMatchEvent("fulltime", {
+    score: { ...state.score },
+    winner: getMatchWinner(),
+  });
   recordMatch();
   renderStartStop();
 
@@ -3659,6 +3782,10 @@ async function runCeremony() {
 
     audioFX.whistle();
     fetchCommentary("kickoff");
+    publishMatchEvent("kickoff", {
+      teamRed: state.teamRed,
+      teamBlue: state.teamBlue,
+    });
     state.autoplay = true;
     state.kickoffCeremonyDone = true;
     renderStartStop();
@@ -3880,9 +4007,11 @@ document.getElementById("ui_lang").value = PTEFeatures.getLang();
 document.getElementById("ui_lang").addEventListener("change", (e) => {
   PTEFeatures.setLang(e.target.value);
   PTEFeatures.applyI18n();
+  PTEFeatures.loadMqttHelp();
   renderStartStop();
 });
 PTEFeatures.applyI18n();
+PTEFeatures.loadMqttHelp();
 initQRCode();
 fetch("/api/config").then(r => r.json()).then(cfg => {
   if (cfg.stateAuthRequired) {
