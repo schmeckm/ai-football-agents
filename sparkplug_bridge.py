@@ -15,7 +15,7 @@ import time
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
-    from tahu import sparkplug_b_pb2 as spb
+    import sparkplug_b_pb2 as spb
 except ImportError:
     spb = None  # type: ignore
 

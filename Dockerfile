@@ -4,10 +4,11 @@ WORKDIR /app
 
 # Install deps separately for build cache
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
 # Copy app
-COPY main.py .
+COPY main.py mqtt_bridge.py sparkplug_bridge.py sparkplug_b_pb2.py .
 COPY static/ ./static/
 
 EXPOSE 8000

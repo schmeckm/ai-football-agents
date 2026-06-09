@@ -299,7 +299,7 @@ server {
 
 ## 📚 Tech stack
 
-- **Backend:** Python 3.11, FastAPI, httpx, Pydantic, uvicorn, paho-mqtt + tahu (optional MQTT UNS / Sparkplug B)
+- **Backend:** Python 3.11, FastAPI, httpx, Pydantic, uvicorn, paho-mqtt (optional MQTT UNS / Sparkplug B)
 - **Frontend:** vanilla HTML / JS / Canvas 2D — no framework, no build step
 - **LLM:** NVIDIA Build API (`meta/llama-3.1-8b-instruct`)
 - **TTS:** Browser `SpeechSynthesis` (no API calls, runs locally in the browser)

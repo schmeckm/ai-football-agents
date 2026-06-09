@@ -1,0 +1,6 @@
+.env
+.git
+.tmp_venv
+.tmp_tahu
+__pycache__
+*.pyc
