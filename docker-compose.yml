@@ -10,3 +10,30 @@ services:
     environment:
       - NVIDIA_API_KEY=${NVIDIA_API_KEY}
       - MODEL_ID=${MODEL_ID:-meta/llama-3.1-8b-instruct}
+      - STATE_TOKEN=${STATE_TOKEN:-}
+      - MQTT_ENABLED=${MQTT_ENABLED:-0}
+      - MQTT_BROKER=${MQTT_BROKER:-mosquitto}
+      - MQTT_PORT=${MQTT_PORT:-1883}
+      - MQTT_WS_URL=${MQTT_WS_URL:-}
+      - MQTT_UNS_PREFIX=${MQTT_UNS_PREFIX:-aspire/basel/demo/football}
+      - MQTT_USERNAME=${MQTT_USERNAME:-}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
+      - MQTT_CLIENT_ID=${MQTT_CLIENT_ID:-football-backend}
+      - MQTT_AGENT_TELEMETRY=${MQTT_AGENT_TELEMETRY:-0}
+      - MQTT_AGENT_INTERVAL_SEC=${MQTT_AGENT_INTERVAL_SEC:-1.0}
+      - SPARKPLUG_ENABLED=${SPARKPLUG_ENABLED:-0}
+      - SPARKPLUG_GROUP_ID=${SPARKPLUG_GROUP_ID:-Aspire}
+      - SPARKPLUG_NODE_ID=${SPARKPLUG_NODE_ID:-football-server}
+      - SPARKPLUG_DEVICE_ID=${SPARKPLUG_DEVICE_ID:-match}
+    depends_on:
+      - mosquitto
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: football-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro

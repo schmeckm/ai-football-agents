@@ -292,6 +292,8 @@ server {
 | **Spectator shows "Waiting" forever** | Main page must be open and a match playing (or just started). State is pushed only when the main page is alive |
 | QR code doesn't load | `api.qrserver.com` blocked by firewall. Spectator URL is still shown as text below the QR — copy/paste into phone |
 | Goalkeeper isn't visible after deploy | You pulled the old image. Portainer Stack → ☑ **Re-pull image** → Pull and redeploy. Then `Ctrl+Shift+R` in browser |
+| Help panel: **MQTT disabled (MQTT_ENABLED=0)** | Set `MQTT_ENABLED=1` in Portainer Stack → **Environment variables** (`.env` is not baked into the image). Redeploy. With the bundled `mosquitto` service use `MQTT_BROKER=mosquitto`. For MQTT Explorer on your PC: host = server IP, port `1883`, subscribe `aspire/basel/demo/football/#` |
+| MQTT enabled but **Not connected** | Broker unreachable from container — do not use `localhost` as `MQTT_BROKER` inside Docker; use the compose service name `mosquitto` or your broker hostname |
 | Heat map empty after match | No active players + no autoplay = no samples. Make sure at least one team had active prompts during play |
 | TTS reads in wrong voice or robotic | Pick a different voice from the dropdown under 🎙️ AI Commentator. On Windows install Microsoft Edge to get the neural voices (Aria/Davis/Guy) |
 
