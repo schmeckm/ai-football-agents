@@ -35,5 +35,14 @@ services:
     ports:
       - "1883:1883"
       - "9001:9001"
-    volumes:
-      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        cat > /mosquitto/config/mosquitto.conf <<'EOF'
+        listener 1883
+        allow_anonymous true
+        listener 9001
+        protocol websockets
+        allow_anonymous true
+        EOF
+        exec /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf
